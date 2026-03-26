@@ -1,0 +1,76 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL") // Para o Supabase
+}
+
+model Clinic {
+  id                 String   @id @default(uuid())
+  name               String
+  whatsapp_number_id String   @unique
+  
+  // Integração Asaas (Split Payment futuro)
+  asaas_api_key      String?
+  asaas_wallet_id    String?
+  
+  // Regras Dinâmicas da IA (Injeção de Contexto)
+  reservation_fee    Int      @default(100)
+  working_hours      String   @default("Segunda a Sexta das 08h às 18h. Sábados até 12h. Domingos fechado.")
+  allowed_procedures String   @default("Botox (Toxina Botulínica), Preenchimentos (Labial, Malar, Mandíbula), Bioestimuladores de Colágeno e Fios de PDO")
+
+  created_at         DateTime @default(now())
+  updated_at         DateTime @updatedAt
+
+  leads              Lead[]
+  appointments       Appointment[]
+}
+
+model Lead {
+  id           String   @id @default(uuid())
+  phone        String   @unique
+  name         String?
+  is_curious   Boolean  @default(false)
+
+  // O Prisma exige isso para saber de qual clínica é este lead
+  clinic_id    String
+  clinic       Clinic   @relation(fields: [clinic_id], references: [id])
+
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  appointments Appointment[]
+}
+
+model Appointment {
+  id               String   @id @default(uuid())
+  procedure        String
+  status           String   @default("PENDING") // PENDING, PAID, CANCELED
+  target_date      DateTime
+  locked_at        DateTime @default(now())
+
+  asaas_payment_id String?  @unique
+  asaas_qr_code    String?
+
+  // Relacionamentos
+  clinic_id        String
+  clinic           Clinic   @relation(fields: [clinic_id], references: [id])
+
+  lead_id          String
+  lead             Lead     @relation(fields: [lead_id], references: [id])
+
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  @@unique([clinic_id, target_date]) 
+}
+
+enum AppointmentStatus {
+  PENDING   // Pix gerado, aguardando pagamento
+  PAID      // Handoff autorizado para a secretária
+  EXPIRED   // Pix não pago a tempo, locked_at liberado
+  CANCELED
+}

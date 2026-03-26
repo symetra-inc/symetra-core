@@ -1,0 +1,31 @@
+# Dependências
+node_modules/
+.pnpm-store/
+
+# IDEs e Sistema
+.vscode/
+.idea/
+.DS_Store
+dist/
+build/
+.turbo/
+
+# Variáveis de Ambiente (CRÍTICO)
+.env
+.env.local
+.env.*.local
+*.env
+serverless.env.yml
+
+# Prisma
+/packages/database/src/generated
+/apps/api/prisma/migrations
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Next.js
+.next/
