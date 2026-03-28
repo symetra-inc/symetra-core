@@ -201,8 +201,8 @@ export class MetaWebhookService {
   }
 
   private async sendMessageToWhatsApp(to: string, text: string) {
-    const token = process.env.WHATSAPP_TOKEN;
-    const phoneId = process.env.WHATSAPP_PHONE_ID;
+    const token = process.env.META_WA_TOKEN;
+    const phoneId = process.env.META_PHONE_ID;
 
     if (!token || !phoneId) return;
 

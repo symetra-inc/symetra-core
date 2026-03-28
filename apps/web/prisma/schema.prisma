@@ -5,19 +5,68 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL") // Para o Supabase
+  directUrl = env("DIRECT_URL") // Essencial para o Supabase
 }
+
+// ==========================================
+// 1. SISTEMA DE ACESSO E HIERARQUIA (RBAC)
+// ==========================================
+
+enum Role {
+  SUPER_ADMIN
+  AGENCY
+  CLINIC
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String?
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(CLINIC)
+
+  // Controle de Acesso: A qual entidade este usuário pertence?
+  agency_id    String?
+  agency       Agency?  @relation(fields: [agency_id], references: [id])
+
+  clinic_id    String?
+  clinic       Clinic?  @relation(fields: [clinic_id], references: [id])
+
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+}
+
+model Agency {
+  id         String   @id @default(uuid())
+  name       String
+  tier       String   @default("CERTIFIED") // CERTIFIED, SILVER, GOLD
+  
+  users      User[]     // Operadores desta agência
+  clinics    Clinic[]   // Carteira de clientes desta agência
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}
+
+// ==========================================
+// 2. O MOTOR DA CLÍNICA E DA IA (SERENA)
+// ==========================================
 
 model Clinic {
   id                 String   @id @default(uuid())
   name               String
   whatsapp_number_id String   @unique
   
-  // Integração Asaas (Split Payment futuro)
+  // Symetra Protocol: A qual agência esta clínica pertence?
+  agency_id          String?
+  agency             Agency?  @relation(fields: [agency_id], references: [id])
+  users              User[]   // Donos/Médicos que acessam o painel
+  
+  // Integração Asaas
   asaas_api_key      String?
   asaas_wallet_id    String?
   
-  // Regras Dinâmicas da IA (Injeção de Contexto)
+  // Regras Dinâmicas da IA
   reservation_fee    Int      @default(100)
   working_hours      String   @default("Segunda a Sexta das 08h às 18h. Sábados até 12h. Domingos fechado.")
   allowed_procedures String   @default("Botox (Toxina Botulínica), Preenchimentos (Labial, Malar, Mandíbula), Bioestimuladores de Colágeno e Fios de PDO")
@@ -35,7 +84,6 @@ model Lead {
   name         String?
   is_curious   Boolean  @default(false)
 
-  // O Prisma exige isso para saber de qual clínica é este lead
   clinic_id    String
   clinic       Clinic   @relation(fields: [clinic_id], references: [id])
 
@@ -48,14 +96,13 @@ model Lead {
 model Appointment {
   id               String   @id @default(uuid())
   procedure        String
-  status           String   @default("PENDING") // PENDING, PAID, CANCELED
+  status           AppointmentStatus @default(PENDING) // Correção aplicada aqui!
   target_date      DateTime
-  locked_at        DateTime @default(now())
+  locked_at        DateTime @default(now()) // A Trava Atômica
 
   asaas_payment_id String?  @unique
   asaas_qr_code    String?
 
-  // Relacionamentos
   clinic_id        String
   clinic           Clinic   @relation(fields: [clinic_id], references: [id])
 

@@ -1,0 +1,43 @@
+"use server";
+
+import { signIn } from "@/auth";
+import { AuthError } from "next-auth";
+import { redirect } from "next/navigation";
+import { prisma } from "@/lib/prisma"; // Trazemos o banco para cá
+
+export async function authenticate(prevState: string | undefined, formData: FormData) {
+  const email = formData.get("email") as string;
+  let targetRoute = "/dashboard"; // Rota padrão (Clínica)
+
+  try {
+    // 1. Descobrimos quem é o cara direto na fonte da verdade (Banco)
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: { role: true },
+    });
+
+    // 2. Definimos a rota correta antes de autenticar
+    if (user?.role === "AGENCY") {
+      targetRoute = "/dashboard/agency";
+    } else if (user?.role === "SUPER_ADMIN") {
+      targetRoute = "/dashboard/agency"; // Por enquanto, Admin vê a agência
+    }
+
+    // 3. Autenticamos e forçamos o NextAuth a fazer o redirecionamento interno
+    await signIn("credentials", {
+      ...Object.fromEntries(formData),
+      redirectTo: targetRoute, 
+    });
+
+  } catch (error) {
+    if (error instanceof AuthError) {
+      switch (error.type) {
+        case "CredentialsSignin":
+          return "Credenciais inválidas. Tente novamente.";
+        default:
+          return "Ocorreu um erro na autenticação.";
+      }
+    }
+    throw error;
+  }
+}

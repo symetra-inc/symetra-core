@@ -6,6 +6,8 @@ import { AsaasWebhookModule } from './modules/webhooks/asaas/asaas.module';
 import { BookingModule } from './modules/booking/booking.module';
 import { SerenaModule } from './modules/serena/serena.module';
 import { MetaWebhookModule } from './modules/webhooks/meta/meta.module';
+import { AppController } from './app.controller';
+import { WhatsAppService } from './modules/webhooks/meta/services/whatsapp.service';  
 
 @Module({   
   imports: [
@@ -17,5 +19,7 @@ import { MetaWebhookModule } from './modules/webhooks/meta/meta.module';
     SerenaModule,
     MetaWebhookModule,
   ],
+  controllers: [AppController],
+  providers: [WhatsAppService], 
 })
 export class AppModule {}
