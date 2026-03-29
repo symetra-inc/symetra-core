@@ -1,3 +1,5 @@
+// prisma/schema.prisma
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -5,119 +7,110 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL") // Essencial para o Supabase
+  directUrl = env("DIRECT_URL") // Para Supabase Connection Pooling
 }
 
 // ==========================================
-// 1. SISTEMA DE ACESSO E HIERARQUIA (RBAC)
+// ENUMS (Regras Rígidas de Negócio)
 // ==========================================
-
-enum Role {
-  SUPER_ADMIN
-  AGENCY
-  CLINIC
-}
-
-model User {
-  id           String   @id @default(uuid())
-  name         String?
-  email        String   @unique
-  passwordHash String
-  role         Role     @default(CLINIC)
-
-  // Controle de Acesso: A qual entidade este usuário pertence?
-  agency_id    String?
-  agency       Agency?  @relation(fields: [agency_id], references: [id])
-
-  clinic_id    String?
-  clinic       Clinic?  @relation(fields: [clinic_id], references: [id])
-
-  created_at   DateTime @default(now())
-  updated_at   DateTime @updatedAt
-}
-
-model Agency {
-  id         String   @id @default(uuid())
-  name       String
-  tier       String   @default("CERTIFIED") // CERTIFIED, SILVER, GOLD
-  
-  users      User[]     // Operadores desta agência
-  clinics    Clinic[]   // Carteira de clientes desta agência
-
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-}
-
-// ==========================================
-// 2. O MOTOR DA CLÍNICA E DA IA (SERENA)
-// ==========================================
-
-model Clinic {
-  id                 String   @id @default(uuid())
-  name               String
-  whatsapp_number_id String   @unique
-  
-  // Symetra Protocol: A qual agência esta clínica pertence?
-  agency_id          String?
-  agency             Agency?  @relation(fields: [agency_id], references: [id])
-  users              User[]   // Donos/Médicos que acessam o painel
-  
-  // Integração Asaas
-  asaas_api_key      String?
-  asaas_wallet_id    String?
-  
-  // Regras Dinâmicas da IA
-  reservation_fee    Int      @default(100)
-  working_hours      String   @default("Segunda a Sexta das 08h às 18h. Sábados até 12h. Domingos fechado.")
-  allowed_procedures String   @default("Botox (Toxina Botulínica), Preenchimentos (Labial, Malar, Mandíbula), Bioestimuladores de Colágeno e Fios de PDO")
-
-  created_at         DateTime @default(now())
-  updated_at         DateTime @updatedAt
-
-  leads              Lead[]
-  appointments       Appointment[]
-}
-
-model Lead {
-  id           String   @id @default(uuid())
-  phone        String   @unique
-  name         String?
-  is_curious   Boolean  @default(false)
-
-  clinic_id    String
-  clinic       Clinic   @relation(fields: [clinic_id], references: [id])
-
-  created_at   DateTime @default(now())
-  updated_at   DateTime @updatedAt
-
-  appointments Appointment[]
-}
-
-model Appointment {
-  id               String   @id @default(uuid())
-  procedure        String
-  status           AppointmentStatus @default(PENDING) // Correção aplicada aqui!
-  target_date      DateTime
-  locked_at        DateTime @default(now()) // A Trava Atômica
-
-  asaas_payment_id String?  @unique
-  asaas_qr_code    String?
-
-  clinic_id        String
-  clinic           Clinic   @relation(fields: [clinic_id], references: [id])
-
-  lead_id          String
-  lead             Lead     @relation(fields: [lead_id], references: [id])
-
-  created_at       DateTime @default(now())
-  updated_at       DateTime @updatedAt
-
-  @@unique([clinic_id, target_date]) 
+enum PersonaType {
+  ARISTOCRATA
+  SOFISTICADA
+  ESPECIALISTA
 }
 
 enum AppointmentStatus {
-  PENDING   // Pix gerado, aguardando pagamento
-  PAID      // Handoff autorizado para a secretária
-  EXPIRED   // Pix não pago a tempo, locked_at liberado
-  CANCELED
+  PENDING // A aguardar Pix (Bloqueio de 15 min)
+  PAID // Pix Confirmado (Handoff autorizado)
+  COMPLETED // Atendido na clínica
+  CANCELLED // Cancelado/No-Show
+}
+
+// ==========================================
+// MODELS (O Motor Multi-Tenant)
+// ==========================================
+
+// A Agência Parceira (B2B2B - Foco do CRO para RevShare)
+model Agency {
+  id             String   @id @default(uuid())
+  name           String
+  cnpj           String?  @unique
+  commissionRate Float    @default(0.20) // Cliff Protocol (20%)
+  createdAt      DateTime @default(now())
+
+  clinics Clinic[]
+}
+
+// O Cliente Final (A Clínica / Tenant)
+model Clinic {
+  id       String  @id @default(uuid())
+  agencyId String?
+  agency   Agency? @relation(fields: [agencyId], references: [id])
+
+  name             String
+  doctorName       String
+  whatsappNumberId String  @unique // O gatilho do Webhook da Meta
+  asaasApiKey      String? // Chave White-label da Subconta
+
+  // O Cérebro da IA
+  persona        PersonaType @default(SOFISTICADA)
+  knowledgeBase  String      @db.Text
+  catalog        Json // Preços e Procedimentos autorizados
+  reservationFee Float       @default(100.00) // O Muro do Pix
+
+  // Gatilhos de Upsell (CRO)
+  upsellBranch  Boolean @default(false)
+  upsellSlaLeak Boolean @default(false)
+  upsellVolume  Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  appointments Appointment[]
+  patients     Patient[]
+}
+
+// O Paciente Final (Protegido pela LGPD)
+model Patient {
+  id       String @id @default(uuid())
+  clinicId String
+  clinic   Clinic @relation(fields: [clinicId], references: [id])
+
+  name          String
+  whatsappPhone String // Usado para identificar quem manda a mensagem
+  cpfEncrypted  String? // Criptografado (LGPD) - Nunca em Plain Text
+
+  createdAt    DateTime      @default(now())
+  appointments Appointment[]
+
+  @@unique([clinicId, whatsappPhone])
+}
+
+// O Agendamento (Onde o dinheiro e o SLA moram)
+model Appointment {
+  id        String  @id @default(uuid())
+  clinicId  String
+  clinic    Clinic  @relation(fields: [clinicId], references: [id])
+  patientId String
+  patient   Patient @relation(fields: [patientId], references: [id])
+
+  status        AppointmentStatus @default(PENDING)
+  procedureName String
+  scheduledAt   DateTime // Data no Google Calendar
+  lockedUntil   DateTime? // A trava de 15 minutos do Pix
+
+  asaasInvoiceId     String?   @unique
+  paymentConfirmedAt DateTime?
+
+  // Dedo-Duro Operacional (SLA)
+  handoffTime DateTime? // Quando a secretária assumiu
+  slaViolated Boolean   @default(false) // Se demorou > 10 min pós-Pix
+
+  // Rastreio de Agência (CMO)
+  utmSource   String?
+  utmMedium   String?
+  utmCampaign String?
+  clickId     String? // Para Meta Conversions API
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

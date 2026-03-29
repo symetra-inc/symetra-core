@@ -21,7 +21,7 @@ export class AgendaSweeperService {
       const result = await this.prisma.appointment.deleteMany({
         where: {
           status: 'PENDING',
-          locked_at: {
+          lockedUntil: {
             lte: expirationTime, // Menor ou igual a 15 minutos atrás
           },
         },

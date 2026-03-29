@@ -13,12 +13,12 @@ export class AsaasWebhookService {
 
     const result = await this.prisma.appointment.updateMany({
       where: {
-        asaas_payment_id: paymentId,
+        asaasInvoiceId: paymentId,
         status: 'PENDING',
       },
       data: {
         status: 'PAID',
-        updated_at: new Date(),
+        updatedAt: new Date(),
       },
     });
 

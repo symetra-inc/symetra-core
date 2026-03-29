@@ -1,12 +1,15 @@
 import { Controller, Get, Post, Body, Query, UseGuards, Res, HttpStatus } from '@nestjs/common';
 import type { Response } from 'express';
-import { MetaWebhookGuard } from './guards/meta-webhook.guard';
 import { AsaasWebhookGuard } from './guards/asaas-webhook.guard';
-import { WhatsAppService } from './modules/webhooks/meta/services/whatsapp.service';
+import { MetaWebhookService } from './modules/webhooks/meta/services/meta.service';
 
 @Controller('webhooks')
 export class AppController {
-  constructor(private readonly waService: WhatsAppService) {}
+  constructor(private readonly metaService: MetaWebhookService) {}
+
+  // ==========================================
+  // VALIDAÇÃO INICIAL DA META (GET)
+  // ==========================================
   @Get('meta')
   verifyMetaWebhook(
     @Query('hub.mode') mode: string,
@@ -14,10 +17,7 @@ export class AppController {
     @Query('hub.challenge') challenge: string,
     @Res() res: Response
   ) {
-    // Usaremos a senha antiga do seu código legado para não ter erro
     const VERIFY_TOKEN = 'Symetra_123';
-
-    console.log(`Tentativa da Meta -> mode: ${mode} | token: ${token}`);
 
     if (mode === 'subscribe' && token === VERIFY_TOKEN) {
       console.log('✅ Webhook da Meta Verificado com Sucesso!');
@@ -29,31 +29,16 @@ export class AppController {
   }
 
   // ==========================================
-  // RECEBIMENTO DAS MENSAGENS (O POST REAL)
+  // RECEBIMENTO DAS MENSAGENS DO WHATSAPP (POST)
   // ==========================================
-@Post('meta')
+  @Post('meta')
   async handleIncomingMessages(@Body() body: any, @Res() res: Response) {
-    // 1. Responde 200 OK para a Meta não reenviar o evento
+    // 1. Libera a Meta imediatamente para não dar timeout (SLA de 2 segundos)
     res.status(HttpStatus.OK).send('EVENT_RECEIVED');
 
-    // 2. Extrai os dados da mensagem recebida
-    const entry = body.entry?.[0];
-    const changes = entry?.changes?.[0];
-    const value = changes?.value;
-    const message = value?.messages?.[0];
-
-    if (message?.type === 'text') {
-      const customerPhone = message.from; // O número de quem mandou
-      const customerText = message.text.body;
-
-      console.log(`📩 Mensagem de ${customerPhone}: ${customerText}`);
-
-      // 3. TESTE DE ECO: Responde o usuário
-      await this.waService.sendMessage(
-        customerPhone, 
-        `Symetra OS: Eu ouvi você dizer "${customerText}". O motor está vivo!`
-      );
-    }
+    // 2. Joga o JSON para o Service processar em background (Sem 'await')
+    // Isso garante que o servidor não trave esperando a OpenAI responder
+    this.metaService.processIncomingMessage(body);
   }
 
   // ==========================================
@@ -62,7 +47,9 @@ export class AppController {
   @Post('asaas')
   @UseGuards(AsaasWebhookGuard)
   receiveAsaasPayment(@Body() body: any) {
-    console.log('💰 Webhook Asaas Validado e Recebido:', JSON.stringify(body, null, 2));
+    console.log('💰 Webhook Asaas Validado e Recebido:', body.event);
+    
+    // Aqui no futuro chamaremos: this.asaasService.processPayment(body)
     return { status: 'Pagamento processado com segurança.' };
   }
 }
