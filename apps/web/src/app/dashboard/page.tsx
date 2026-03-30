@@ -1,127 +1,168 @@
-import { ArrowUpRight, DollarSign, Activity, ListFilter } from "lucide-react";
-import { Inter } from "next/font/google";
-import { getClinicMetrics } from "./actions"; // Importa a action
+import { Calendar, CheckCircle, Clock, XCircle, TrendingUp } from "lucide-react";
+import { getAppointments } from "./actions";
+import { AppointmentStatus } from "@prisma/client";
 
-const inter = Inter({ subsets: ["latin"], weight: ["300", "400", "500", "600", "700"] });
+const statusConfig: Record<AppointmentStatus, { label: string; className: string }> = {
+  PAID: {
+    label: "PAGO",
+    className: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
+  },
+  PENDING: {
+    label: "PENDENTE",
+    className: "bg-amber-500/10 text-amber-400 border border-amber-500/20",
+  },
+  COMPLETED: {
+    label: "CONCLUÍDO",
+    className: "bg-blue-500/10 text-blue-400 border border-blue-500/20",
+  },
+  CANCELLED: {
+    label: "CANCELADO",
+    className: "bg-red-500/10 text-red-400 border border-red-500/20",
+  },
+};
+
+function StatusBadge({ status }: { status: AppointmentStatus }) {
+  const { label, className } = statusConfig[status];
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 text-xs font-mono font-medium rounded-md ${className}`}>
+      {label}
+    </span>
+  );
+}
 
 export default async function ClinicDashboard() {
-  // O Next.js resolve a action direto no servidor antes de renderizar
-  const metrics = await getClinicMetrics();
+  const appointments = await getAppointments();
+
+  const total = appointments.length;
+  const paid = appointments.filter((a) => a.status === "PAID").length;
+  const pending = appointments.filter((a) => a.status === "PENDING").length;
+  const cancelled = appointments.filter((a) => a.status === "CANCELLED").length;
+  const conversionRate = total > 0 ? Math.round((paid / total) * 100) : 0;
+
+  const recent = appointments.slice(0, 8);
 
   return (
-    <div className={`max-w-6xl mx-auto space-y-8 ${inter.className}`}>
-      {/* ... Header igual ... */}
-      
-      {/* WIDGETS PRINCIPAIS */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        
-        {/* WIDGET 1: Receita Retida */}
-        <div className="p-6 border border-[#71717A]/30 rounded-sm bg-[#0A0A0A] shadow-sm relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-[#A38A5E] opacity-[0.03] rounded-bl-full pointer-events-none" />
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-medium text-[#71717A] uppercase tracking-wider">Receita Retida (Pix)</h3>
-            <DollarSign className="w-4 h-4 text-[#A38A5E]" />
-          </div>
-          <div className="flex items-baseline gap-2">
-            {/* Variavel real aqui */}
-            <span className="text-4xl font-bold text-[#FAFAFA] tracking-tighter">
-              R$ {metrics.retainedRevenue.toLocaleString('pt-BR')}
-            </span>
-          </div>
-          <p className="text-xs text-[#71717A] mt-2">Sinal de garantia retido.</p>
-        </div>
+    <div className="max-w-6xl mx-auto space-y-8">
 
-        {/* WIDGET 2: Agendamentos */}
-        <div className="p-6 border border-[#71717A]/30 rounded-sm bg-[#0A0A0A] shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-medium text-[#71717A] uppercase tracking-wider">Agendamentos</h3>
-            <Activity className="w-4 h-4 text-[#71717A]" />
-          </div>
-          <div className="flex items-baseline gap-2">
-            {/* Variaveis reais aqui */}
-            <span className="text-4xl font-bold text-[#FAFAFA] tracking-tighter">{metrics.paidAppointments}</span>
-            <span className="text-xs text-[#71717A] font-medium">/ {metrics.totalLeads} Leads</span>
-          </div>
-          <p className="text-xs text-[#71717A] mt-2">Taxa de conversão: {metrics.conversionRate}%</p>
-        </div>
-
-        {/* WIDGET 3: Faltas Evitadas */}
-        <div className="p-6 border border-[#71717A]/30 rounded-sm bg-[#0A0A0A] shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-medium text-[#71717A] uppercase tracking-wider">No-Shows Evitados</h3>
-            <ListFilter className="w-4 h-4 text-[#71717A]" />
-          </div>
-          <div className="flex items-baseline gap-2">
-            {/* Variavel real aqui */}
-            <span className="text-4xl font-bold text-[#FAFAFA] tracking-tighter">{metrics.canceledAppointments}</span>
-          </div>
-          <p className="text-xs text-[#71717A] mt-2">Curiosos barrados pela Serena.</p>
-        </div>
+      {/* Page heading */}
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-white">Visão Geral</h1>
+        <p className="text-sm text-zinc-500 mt-0.5">Acompanhe o desempenho da clínica em tempo real.</p>
       </div>
-      
-      {/* FEED DA SERENA E GRÁFICO (Layout Dividido) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Gráfico de Conversão (Placeholder Brutalista para o MVP) */}
-        <div className="lg:col-span-2 p-6 border border-[#71717A]/30 rounded-sm bg-[#0A0A0A]">
-          <h3 className="text-sm font-medium text-[#FAFAFA] uppercase tracking-wider mb-6">Status de Conversão (Leads vs Pagos)</h3>
-          <div className="h-64 w-full border-b border-l border-[#71717A]/20 relative flex items-end px-2 gap-4 pb-2">
-            {/* Barras simulando dados reais em Brushed Gold e Zinc */}
-            {[40, 65, 30, 85, 50, 95, 70].map((height, i) => (
-              <div key={i} className="flex-1 flex flex-col justify-end items-center gap-1 group">
-                <div 
-                  className="w-full bg-[#A38A5E] hover:bg-[#A38A5E]/80 transition-all rounded-t-sm" 
-                  style={{ height: `${height}%` }}
-                />
-                <span className="text-[10px] text-[#71717A] mt-2">0{i + 1}/10</span>
-              </div>
-            ))}
+
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+
+        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Total</span>
+            <Calendar className="w-4 h-4 text-zinc-600" />
+          </div>
+          <div>
+            <p className="text-3xl font-bold tracking-tight text-white">{total}</p>
+            <p className="text-xs text-zinc-500 mt-1">agendamentos</p>
           </div>
         </div>
 
-        {/* O Feed da Serena (Log de Eventos) */}
-        <div className="p-6 border border-[#71717A]/30 rounded-sm bg-[#0A0A0A] flex flex-col">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-sm font-medium text-[#FAFAFA] uppercase tracking-wider">Feed da Serena</h3>
+        <div className="rounded-2xl border border-emerald-500/10 bg-emerald-500/[0.04] p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-emerald-500/70 uppercase tracking-wider">Pagos</span>
+            <CheckCircle className="w-4 h-4 text-emerald-500/50" />
           </div>
-          
-          <div className="flex-1 space-y-4 overflow-y-auto pr-2">
-            {/* Item do Log */}
-            <div className="flex gap-3 text-sm">
-              <span className="text-[#71717A] font-mono text-xs mt-0.5">[22:04]</span>
-              <div>
-                <p className="text-[#FAFAFA] font-medium">Agendamento Confirmado</p>
-                <p className="text-[#71717A] text-xs">Preenchimento Labial • R$ 100,00</p>
-              </div>
-            </div>
+          <div>
+            <p className="text-3xl font-bold tracking-tight text-emerald-400">{paid}</p>
+            <p className="text-xs text-emerald-500/60 mt-1">confirmados</p>
+          </div>
+        </div>
 
-            <div className="flex gap-3 text-sm">
-              <span className="text-[#71717A] font-mono text-xs mt-0.5">[21:15]</span>
-              <div>
-                <p className="text-[#FAFAFA] font-medium">Pix Gerado</p>
-                <p className="text-[#71717A] text-xs">Harmonização Facial • Aguardando Pagamento</p>
-              </div>
-            </div>
+        <div className="rounded-2xl border border-amber-500/10 bg-amber-500/[0.04] p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-amber-500/70 uppercase tracking-wider">Pendentes</span>
+            <Clock className="w-4 h-4 text-amber-500/50" />
+          </div>
+          <div>
+            <p className="text-3xl font-bold tracking-tight text-amber-400">{pending}</p>
+            <p className="text-xs text-amber-500/60 mt-1">aguardando pix</p>
+          </div>
+        </div>
 
-            <div className="flex gap-3 text-sm opacity-60">
-              <span className="text-[#71717A] font-mono text-xs mt-0.5">[19:30]</span>
-              <div>
-                <p className="text-[#FAFAFA] font-medium line-through">Curioso Bloqueado</p>
-                <p className="text-[#71717A] text-xs">Recusou pagamento de sinal.</p>
-              </div>
-            </div>
-            
-            <div className="flex gap-3 text-sm">
-              <span className="text-[#71717A] font-mono text-xs mt-0.5">[18:45]</span>
-              <div>
-                <p className="text-[#FAFAFA] font-medium">Agendamento Confirmado</p>
-                <p className="text-[#71717A] text-xs">Fios de PDO • R$ 100,00</p>
-              </div>
-            </div>
+        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">Conversão</span>
+            <TrendingUp className="w-4 h-4 text-zinc-600" />
+          </div>
+          <div>
+            <p className="text-3xl font-bold tracking-tight text-white">{conversionRate}%</p>
+            <p className="text-xs text-zinc-500 mt-1">leads → pagos</p>
           </div>
         </div>
 
       </div>
+
+      {/* Recent appointments table */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-white">Últimos agendamentos</h2>
+          <span className="text-xs font-mono text-zinc-600 border border-white/[0.06] rounded-xl px-3 py-1">
+            {total} registros
+          </span>
+        </div>
+
+        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
+          {recent.length === 0 ? (
+            <div className="px-6 py-16 text-center text-zinc-600 text-sm">
+              Nenhum agendamento encontrado.
+            </div>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-white/[0.06]">
+                  {["Paciente", "Procedimento", "Data/Hora", "Status", "Ação"].map((col) => (
+                    <th
+                      key={col}
+                      className="text-left px-6 py-3 text-xs font-medium text-zinc-600 uppercase tracking-wider"
+                    >
+                      {col}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {recent.map((appt, i) => (
+                  <tr
+                    key={appt.id}
+                    className={`border-b border-white/[0.04] last:border-0 hover:bg-white/[0.02] transition-colors ${
+                      i % 2 !== 0 ? "bg-white/[0.01]" : ""
+                    }`}
+                  >
+                    <td className="px-6 py-4 text-white font-medium tracking-tight">
+                      {appt.patient.name}
+                    </td>
+                    <td className="px-6 py-4 text-zinc-400 text-xs">{appt.procedureName}</td>
+                    <td className="px-6 py-4 font-mono text-xs text-zinc-500">
+                      {appt.scheduledAt.toLocaleDateString("pt-BR")}
+                      {" · "}
+                      {appt.scheduledAt.toLocaleTimeString("pt-BR", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </td>
+                    <td className="px-6 py-4">
+                      <StatusBadge status={appt.status} />
+                    </td>
+                    <td className="px-6 py-4">
+                      <button className="text-xs text-zinc-600 hover:text-white border border-white/[0.06] hover:border-white/20 rounded-xl px-3 py-1 transition-all duration-200">
+                        Ver detalhes
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+
     </div>
   );
 }

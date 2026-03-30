@@ -1,26 +1,36 @@
 @import "tailwindcss";
 
 @theme {
-  --color-background: #0A0A0A; /* Onyx Black */
-  --color-foreground: #FAFAFA; /* Surgical White */
-  --color-muted: #71717A;      /* Zinc */
-  --color-accent: #A38A5E;     /* Brushed Gold */
-  
-  /* A tipografia será injetada via Next.js Font Optimization */
+  /* Brutalist Dark Palette */
+  --color-onyx: #0F0F0F;
+  --color-zinc-panel: #18181B;
+  --color-gold: #C5A059;
+  --color-sec: #27272A;
+
+  /* Legacy aliases */
+  --color-background: #0F0F0F;
+  --color-foreground: #FAFAFA;
+  --color-muted: #71717A;
+  --color-accent: #C5A059;
+
   --font-serif: var(--font-playfair), ui-serif, Georgia, serif;
   --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
 }
 
 @layer base {
+  :root {
+    color-scheme: dark;
+  }
+
   body {
-    background-color: var(--color-background);
-    color: var(--color-foreground);
+    background-color: var(--color-onyx);
+    color: #FAFAFA;
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
   }
-  
+
   ::selection {
-    background-color: var(--color-accent);
-    color: var(--color-background);
+    background-color: var(--color-gold);
+    color: var(--color-onyx);
   }
 }

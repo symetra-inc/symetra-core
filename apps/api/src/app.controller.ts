@@ -1,6 +1,5 @@
-import { Controller, Get, Post, Body, Query, UseGuards, Res, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, Res, HttpStatus } from '@nestjs/common';
 import type { Response } from 'express';
-import { AsaasWebhookGuard } from './guards/asaas-webhook.guard';
 import { MetaWebhookService } from './modules/webhooks/meta/services/meta.service';
 
 @Controller('webhooks')
@@ -41,15 +40,4 @@ export class AppController {
     this.metaService.processIncomingMessage(body);
   }
 
-  // ==========================================
-  // RECEBIMENTO FINANCEIRO (ASAAS)
-  // ==========================================
-  @Post('asaas')
-  @UseGuards(AsaasWebhookGuard)
-  receiveAsaasPayment(@Body() body: any) {
-    console.log('💰 Webhook Asaas Validado e Recebido:', body.event);
-    
-    // Aqui no futuro chamaremos: this.asaasService.processPayment(body)
-    return { status: 'Pagamento processado com segurança.' };
-  }
 }

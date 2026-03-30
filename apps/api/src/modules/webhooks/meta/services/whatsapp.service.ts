@@ -1,32 +1,47 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import axios from 'axios';
+
+const GRAPH_URL = 'https://graph.facebook.com/v19.0';
 
 @Injectable()
 export class WhatsAppService {
-  private readonly apiUrl = `https://graph.facebook.com/v21.0/${process.env.META_PHONE_ID}/messages`;
-  private readonly token = process.env.META_WA_TOKEN;
+  private readonly logger = new Logger(WhatsAppService.name);
 
-  async sendMessage(to: string, text: string) {
+  /** Envia uma mensagem de texto para um número via WhatsApp Cloud API (multi-tenant). */
+  async sendMessage(clinicPhoneId: string, to: string, text: string): Promise<void> {
+    const token = process.env.META_WA_TOKEN;
+    if (!token || !clinicPhoneId) return;
     try {
       await axios.post(
-        this.apiUrl,
+        `${GRAPH_URL}/${clinicPhoneId}/messages`,
         {
           messaging_product: 'whatsapp',
           recipient_type: 'individual',
-          to: to,
+          to,
           type: 'text',
-          text: { body: text },
+          text: { preview_url: false, body: text },
         },
-        {
-          headers: {
-            Authorization: `Bearer ${this.token}`,
-            'Content-Type': 'application/json',
-          },
-        }
+        { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } },
       );
-      console.log(`📤 Mensagem enviada para ${to}`);
     } catch (error) {
-      console.error('❌ Erro ao enviar mensagem WhatsApp:', error.response?.data || error.message);
+      this.logger.error(
+        `[WHATSAPP] Erro no envio para ${to}: ${error.response?.data?.error?.message || error.message}`,
+      );
+    }
+  }
+
+  /** Marca a mensagem recebida como lida (double-tick azul) — simula presença. */
+  async markAsRead(clinicPhoneId: string, messageId: string): Promise<void> {
+    const token = process.env.META_WA_TOKEN;
+    if (!token || !clinicPhoneId || !messageId) return;
+    try {
+      await axios.post(
+        `${GRAPH_URL}/${clinicPhoneId}/messages`,
+        { messaging_product: 'whatsapp', status: 'read', message_id: messageId },
+        { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } },
+      );
+    } catch {
+      // Não-crítico — ignora falha no read receipt
     }
   }
 }

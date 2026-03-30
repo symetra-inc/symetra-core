@@ -17,11 +17,12 @@ export async function authenticate(prevState: string | undefined, formData: Form
     });
 
     // 2. Definimos a rota correta antes de autenticar
-    if (user?.role === "AGENCY") {
+    if (user?.role === "AGENCY_ADMIN") {
       targetRoute = "/dashboard/agency";
-    } else if (user?.role === "SUPER_ADMIN") {
-      targetRoute = "/dashboard/agency"; // Por enquanto, Admin vê a agência
+    } else if (user?.role === "MASTER") {
+      targetRoute = "/dashboard/agency"; // Por enquanto, Master vê a agência
     }
+    // CLINIC_ADMIN e RECEPTIONIST vão para /dashboard (default)
 
     // 3. Autenticamos e forçamos o NextAuth a fazer o redirecionamento interno
     await signIn("credentials", {

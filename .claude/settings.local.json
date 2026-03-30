@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm add:*)",
+      "Bash(npx tsc:*)",
+      "Bash(ls -la /c/Users/Pichau/Desktop/_/symetra-os/apps/web/*.*)",
+      "Bash(grep -E \"\\\\.\\(ts|js|json|css|mjs\\)$\")",
+      "Bash(pnpm build:*)"
+    ]
+  }
+}

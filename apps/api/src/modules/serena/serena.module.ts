@@ -1,8 +1,11 @@
 import { Module } from '@nestjs/common';
 import { SerenaService } from './services/serena.service';
+import { CalendarModule } from '../calendar/calendar.module';
+import { AsaasModule } from '../asaas/asaas.module';
 
 @Module({
+  imports: [CalendarModule, AsaasModule],
   providers: [SerenaService],
-  exports: [SerenaService], // Exportamos para que o webhook do WhatsApp possa usá-la
+  exports: [SerenaService],
 })
 export class SerenaModule {}

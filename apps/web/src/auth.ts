@@ -49,7 +49,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (!user) return null; // Usuário não existe
 
         // 2. Compara a senha digitada com a senha criptografada do banco
-        const passwordsMatch = await bcrypt.compare(password, user.passwordHash);
+        const passwordsMatch = await bcrypt.compare(password, user.password);
 
         if (passwordsMatch) {
           // Retorna os dados injetando a Role do banco

@@ -1,5 +1,3 @@
-// prisma/schema.prisma
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -20,15 +18,41 @@ enum PersonaType {
 }
 
 enum AppointmentStatus {
-  PENDING // A aguardar Pix (Bloqueio de 15 min)
-  PAID // Pix Confirmado (Handoff autorizado)
-  COMPLETED // Atendido na clínica
-  CANCELLED // Cancelado/No-Show
+  PENDING    // A aguardar Pix (Bloqueio de 15 min)
+  PAID       // Pix Confirmado (Handoff autorizado)
+  COMPLETED  // Atendido na clínica
+  CANCELLED  // Cancelado/No-Show
+}
+
+enum UserRole {
+  MASTER         // CEO da Symetra (Acesso global)
+  AGENCY_ADMIN   // Dono da Agência (Acessa suas clínicas)
+  CLINIC_ADMIN   // Dono/Gerente da Clínica
+  RECEPTIONIST   // Atendimento (Permissões restritas)
 }
 
 // ==========================================
 // MODELS (O Motor Multi-Tenant)
 // ==========================================
+
+// Tabela de usuários para Login (Hierarquia Flexível)
+model User {
+  id        String    @id @default(uuid())
+  name      String    // Adicionado para o NextAuth
+  email     String    @unique
+  password  String    // O NextAuth estava procurando passwordHash, vamos usar password
+  role      UserRole  @default(CLINIC_ADMIN)
+  
+  clinicId  String?
+  clinic    Clinic?   @relation(fields: [clinicId], references: [id])
+  agencyId  String?
+  agency    Agency?   @relation(fields: [agencyId], references: [id])
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("users")
+}
 
 // A Agência Parceira (B2B2B - Foco do CRO para RevShare)
 model Agency {
@@ -39,13 +63,14 @@ model Agency {
   createdAt      DateTime @default(now())
 
   clinics Clinic[]
+  users   User[] // Usuários da agência
 }
 
 // O Cliente Final (A Clínica / Tenant)
 model Clinic {
-  id       String  @id @default(uuid())
-  agencyId String?
-  agency   Agency? @relation(fields: [agencyId], references: [id])
+  id               String  @id @default(uuid())
+  agencyId         String?
+  agency           Agency? @relation(fields: [agencyId], references: [id])
 
   name             String
   doctorName       String
@@ -53,64 +78,84 @@ model Clinic {
   asaasApiKey      String? // Chave White-label da Subconta
 
   // O Cérebro da IA
-  persona        PersonaType @default(SOFISTICADA)
-  knowledgeBase  String      @db.Text
-  catalog        Json // Preços e Procedimentos autorizados
-  reservationFee Float       @default(100.00) // O Muro do Pix
+  persona          PersonaType @default(SOFISTICADA)
+  knowledgeBase    String      @db.Text
+  catalog          Json        // Preços e Procedimentos autorizados
+  reservationFee   Float       @default(100.00) // O Muro do Pix
 
   // Gatilhos de Upsell (CRO)
-  upsellBranch  Boolean @default(false)
-  upsellSlaLeak Boolean @default(false)
-  upsellVolume  Boolean @default(false)
+  upsellBranch     Boolean @default(false)
+  upsellSlaLeak    Boolean @default(false)
+  upsellVolume     Boolean @default(false)
 
-  createdAt DateTime @default(now())
+  createdAt        DateTime @default(now())
 
-  appointments Appointment[]
-  patients     Patient[]
+  appointments     Appointment[]
+  patients         Patient[]
+  users            User[] // Usuários da clínica
 }
 
 // O Paciente Final (Protegido pela LGPD)
 model Patient {
-  id       String @id @default(uuid())
-  clinicId String
-  clinic   Clinic @relation(fields: [clinicId], references: [id])
+  id            String  @id @default(uuid())
+  clinicId      String
+  clinic        Clinic  @relation(fields: [clinicId], references: [id])
 
   name          String
-  whatsappPhone String // Usado para identificar quem manda a mensagem
+  whatsappPhone String  // Usado para identificar quem manda a mensagem
+  bsuid         String? // Meta BSUID — identificador futuro (Jun/2026)
   cpfEncrypted  String? // Criptografado (LGPD) - Nunca em Plain Text
 
-  createdAt    DateTime      @default(now())
-  appointments Appointment[]
+  // Controlo de estado do bot
+  botPaused     Boolean @default(false) // IA muda quando um humano assume
+  requiresHuman Boolean @default(false) // Sinaliza necessidade de intervenção humana
+
+  createdAt     DateTime @default(now())
+  appointments  Appointment[]
+  messages      Message[]
 
   @@unique([clinicId, whatsappPhone])
+  @@index([bsuid])
+}
+
+// Histórico persistente de mensagens (Redis é efémero; esta tabela é o audit log)
+model Message {
+  id        String   @id @default(uuid())
+  patientId String
+  patient   Patient  @relation(fields: [patientId], references: [id])
+  role      String   // 'USER' | 'AI' | 'HUMAN'
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([patientId, createdAt])
 }
 
 // O Agendamento (Onde o dinheiro e o SLA moram)
 model Appointment {
-  id        String  @id @default(uuid())
-  clinicId  String
-  clinic    Clinic  @relation(fields: [clinicId], references: [id])
-  patientId String
-  patient   Patient @relation(fields: [patientId], references: [id])
+  id                 String  @id @default(uuid())
+  clinicId           String
+  clinic             Clinic  @relation(fields: [clinicId], references: [id])
+  patientId          String
+  patient            Patient @relation(fields: [patientId], references: [id])
 
-  status        AppointmentStatus @default(PENDING)
-  procedureName String
-  scheduledAt   DateTime // Data no Google Calendar
-  lockedUntil   DateTime? // A trava de 15 minutos do Pix
+  status             AppointmentStatus @default(PENDING)
+  procedureName      String
+  scheduledAt        DateTime  // Data no Google Calendar
+  lockedUntil        DateTime? // A trava de 15 minutos do Pix
 
   asaasInvoiceId     String?   @unique
   paymentConfirmedAt DateTime?
 
   // Dedo-Duro Operacional (SLA)
-  handoffTime DateTime? // Quando a secretária assumiu
-  slaViolated Boolean   @default(false) // Se demorou > 10 min pós-Pix
+  handoffTime        DateTime? // Quando a secretária assumiu
+  slaViolated        Boolean   @default(false) // Se demorou > 10 min pós-Pix
 
   // Rastreio de Agência (CMO)
-  utmSource   String?
-  utmMedium   String?
-  utmCampaign String?
-  clickId     String? // Para Meta Conversions API
+  utmSource          String?
+  utmMedium          String?
+  utmCampaign        String?
+  clickId            String?   // Para Meta Conversions API
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 }

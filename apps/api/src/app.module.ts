@@ -6,25 +6,26 @@ import { AsaasWebhookModule } from './modules/webhooks/asaas/asaas.module';
 import { BookingModule } from './modules/booking/booking.module';
 import { SerenaModule } from './modules/serena/serena.module';
 import { MetaWebhookModule } from './modules/webhooks/meta/meta.module';
+import { RedisModule } from './modules/redis/redis.module';
+import { CalendarModule } from './modules/calendar/calendar.module';
+import { CleanupModule } from './modules/cleanup/cleanup.module';
 import { AppController } from './app.controller';
-import { WhatsAppService } from './modules/webhooks/meta/services/whatsapp.service';  
 import { CryptoService } from './services/crypto.service';
-import { PrismaService } from './prisma/prisma.service';
-import { HttpModule } from '@nestjs/axios'
-import { MetaWebhookService } from './modules/webhooks/meta/services/meta.service';
 
-@Module({   
+@Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     ScheduleModule.forRoot(),
     PrismaModule,
+    RedisModule,
+    CalendarModule,
     AsaasWebhookModule,
     BookingModule,
     SerenaModule,
     MetaWebhookModule,
-    HttpModule,
+    CleanupModule,
   ],
   controllers: [AppController],
-  providers: [WhatsAppService, CryptoService, PrismaService, MetaWebhookService], 
+  providers: [CryptoService],
 })
 export class AppModule {}
