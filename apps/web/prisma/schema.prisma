@@ -77,6 +77,9 @@ model Clinic {
   whatsappNumberId String  @unique // O gatilho do Webhook da Meta
   asaasApiKey      String? // Chave White-label da Subconta
 
+  receptionistPhone String? // WhatsApp da secretária para notificações de handoff
+  receptionistName  String? // Para personalizar a notificação
+
   // O Cérebro da IA
   persona          PersonaType @default(SOFISTICADA)
   knowledgeBase    String      @db.Text

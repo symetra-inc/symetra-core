@@ -2,8 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import axios from 'axios';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 
-const ASAAS_BASE_URL = process.env.ASAAS_BASE_URL ?? 'https://sandbox.asaas.com/api/v3';
-
+const ASAAS_BASE_URL = process.env.ASAAS_BASE_URL
 export interface PixChargeInput {
   clinicId: string;
   patientId: string;
