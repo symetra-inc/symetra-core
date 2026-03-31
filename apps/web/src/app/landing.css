@@ -1,0 +1,108 @@
+/* ─── landing.css
+   Adicione em: apps/web/app/globals.css via @import './landing.css'
+   ou copie direto no final do globals.css existente.
+   Contém APENAS o que Tailwind não cobre:
+   cursor customizado, canvas de partículas, animações e variáveis CSS.
+──────────────────────────────────────────────────── */
+
+:root {
+  --gold:     #C5A059;
+  --gold-dim: rgba(197, 160, 89, 0.12);
+  --gold-mid: #A8854A;
+  --ink:      #0E0C0A;
+  --ink2:     #1A1714;
+  --ink3:     #242018;
+  --linen:    #F5F0E8;
+  --ash:      #9C8E82;
+  --stone:    rgba(156, 142, 130, 0.18);
+}
+
+/* Cursor global */
+html, body, a, button { cursor: none; }
+
+/* ── Crosshair ── */
+.ch {
+  position: fixed;
+  background: rgba(197, 160, 89, 0.72);
+  pointer-events: none;
+  z-index: 9999;
+  top: 0; left: 0;
+  will-change: transform;
+  transition: width 0.18s, height 0.18s;
+}
+.ch-v { width: 0.5px; height: 14px; }
+.ch-h { height: 0.5px; width: 10px; }
+.ch-center {
+  position: fixed;
+  width: 3px; height: 3px;
+  background: var(--gold);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  top: 0; left: 0;
+  will-change: transform;
+}
+
+/* ── Particle canvas ── */
+#particles {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Hero entrance (GSAP sets opacity via inline, these are initial states) ── */
+.hero-eyebrow,
+.hero-h1,
+.hero-sub,
+.btn-cta-hero,
+.hero-stats { opacity: 0; }
+
+/* ── Pix notification positions ── */
+.pn { position: absolute; opacity: 0; z-index: 3; }
+.pn:nth-child(1) { top: 5%;  right: 2%; }
+.pn:nth-child(2) { top: 26%; right: 8%; }
+.pn:nth-child(3) { top: 50%; right: 2%; }
+.pn:nth-child(4) { top: 72%; right: 6%; }
+.pn:nth-child(5) { top: 16%; left:  2%; }
+
+/* ── Phone messages ── */
+.msg { opacity: 0; }
+.pix-bbl { opacity: 0; }
+
+/* ── Scroll reveal initial state ── */
+.reveal    { opacity: 0; transform: translateY(24px); }
+.sec-entry { opacity: 0; transform: translateY(24px); }
+
+/* ── Dashboard table row hover ── */
+.dash-tr {
+  transition: background 0.15s, padding-left 0.15s;
+}
+.dash-tr:hover {
+  background: rgba(255, 255, 255, 0.02);
+  padding-left: 1.3rem;
+}
+
+/* ── CTA rings (GSAP moves these via ScrollTrigger) ── */
+.cta-ring {
+  position: absolute;
+  top: 50%; left: 50%;
+  border: 0.5px solid rgba(197, 160, 89, 0.06);
+  border-radius: 50%;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  will-change: transform;
+}
+
+/* ── Metric card 3D hover (GSAP applies inline transform) ── */
+.mc { transition: border-color 0.2s; }
+
+/* ── Statement background text parallax ── */
+.stmt-bg {
+  position: absolute;
+  white-space: nowrap;
+  pointer-events: none;
+  top: 50%;
+  transform: translateY(-50%);
+  /* color/font set via Tailwind in JSX */
+}
