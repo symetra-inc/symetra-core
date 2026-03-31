@@ -503,7 +503,7 @@ export default function Home() {
         <div className="max-w-[1000px] mx-auto grid grid-cols-2 gap-24 items-center">
           <div className="reveal">
             <div className="text-[9px] tracking-[.2em] uppercase mb-5" style={{ fontFamily: 'var(--font-jetbrains)', color: '#A8854A' }}>
-              Programa de parceria
+              Programa de parceria - Você não é o problema<em style={{ fontStyle: 'italic', fontWeight: 400, color: '#C5A059' }}>tra</em>
             </div>
             <h2 className="text-[clamp(2rem,3.2vw,2.8rem)] font-bold tracking-tight leading-[1.1] mb-5 text-[#0E0C0A]"
                 style={{ fontFamily: 'var(--font-fraunces)' }}>
@@ -512,6 +512,9 @@ export default function Home() {
             </h2>
             <p className="text-[.9rem] leading-[1.8] mb-8" style={{ color: '#5C5249' }}>
               Entregue faturamento, não leads. A Symetra converte o tráfego que você gera em Pix confirmados na conta do cliente. RevShare automático, dashboard de agência, zero operacional.
+            </p>
+            <p className="text-[.9rem] leading-[1.8] mb-8 font-bold" style={{ color: '#5C5249' }}>
+              Menos CAC. Mais LTV. 
             </p>
             <a href={WA_AGENCY} target="_blank" rel="noopener noreferrer"
                className="inline-flex items-center gap-2 text-xs font-medium tracking-wide px-6 py-3 rounded-sm no-underline transition-all hover:-translate-y-px hover:opacity-90"
@@ -534,12 +537,7 @@ export default function Home() {
                 { lbl: 'Meses 1–6 (cliff)',  val: '20% · ~R$ 299/mês', gold: true  },
                 { lbl: 'Meses 7–12',         val: '10% · ~R$ 150/mês', gold: false },
                 { lbl: '+13 meses (badge)',   val: '0% → 5%',           gold: false },
-              ]},
-              { section: 'Badges após 12 meses', rows: [
-                { lbl: '0–5 clínicas',  val: '0%',   gold: false },
-                { lbl: '6–15 clínicas', val: '2,5%', gold: true  },
-                { lbl: '+16 clínicas',  val: '5%',   gold: true  },
-              ]},
+              ]},             
             ].map(({ section, rows }) => (
               <div key={section}>
                 <div className="text-[8px] tracking-[.12em] uppercase mt-3.5 mb-1 pt-2 border-t border-[#F0EAE0]" style={{ color: '#9C8E82', fontFamily: 'var(--font-jetbrains)' }}>
