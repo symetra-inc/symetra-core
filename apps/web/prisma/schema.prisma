@@ -133,6 +133,16 @@ model Message {
   @@index([patientId, createdAt])
 }
 
+// Sessão de conversa (controla flags runtime como mute da IA)
+model Session {
+  id        String   @id @default(uuid())
+  isAiMuted Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("sessions")
+}
+
 // O Agendamento (Onde o dinheiro e o SLA moram)
 model Appointment {
   id                 String  @id @default(uuid())

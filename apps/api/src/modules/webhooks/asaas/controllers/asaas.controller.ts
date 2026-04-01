@@ -1,6 +1,7 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, Headers, Logger, UnauthorizedException } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus, Logger, UseGuards } from '@nestjs/common';
 import { AsaasWebhookService } from '../services/asaas.service';
 import { asaasPayloadSchema } from '../dto/asaas-payload.dto';
+import { AsaasWebhookGuard } from '../../../../../webhooks/guards/asaas-webhook.guard';
 
 const PAYMENT_CONFIRMED_EVENTS = new Set(['PAYMENT_RECEIVED', 'PAYMENT_CONFIRMED']);
 const PAYMENT_REFUSED_EVENTS = new Set(['PAYMENT_REFUSED', 'PAYMENT_DELETED', 'PAYMENT_OVERDUE']);
@@ -11,22 +12,10 @@ export class AsaasWebhookController {
 
   constructor(private readonly asaasService: AsaasWebhookService) {}
 
+  @UseGuards(AsaasWebhookGuard)
   @Post()
   @HttpCode(HttpStatus.OK)
-  async handleIncomingWebhook(
-    @Headers('asaas-access-token') token: string,
-    @Body() payload: unknown,
-  ) {
-    // Segurança: valida token apenas quando ASAAS_WEBHOOK_TOKEN está configurado
-    const webhookSecret = process.env.ASAAS_WEBHOOK_TOKEN;
-    if (webhookSecret) {
-      if (token !== webhookSecret) {
-        throw new UnauthorizedException('Token inválido.');
-      }
-    } else {
-      this.logger.warn('[WEBHOOK] ASAAS_WEBHOOK_TOKEN não configurado — validação de token ignorada (modo teste).');
-    }
-
+  async handleIncomingWebhook(@Body() payload: unknown) {
     this.logger.log(`[WEBHOOK] Payload bruto recebido: ${JSON.stringify(payload)}`);
 
     const parsedData = asaasPayloadSchema.safeParse(payload);

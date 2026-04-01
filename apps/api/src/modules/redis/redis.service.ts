@@ -39,6 +39,22 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  // ── Generic low-level primitives ─────────────────────────────────────────
+
+  async get(key: string): Promise<string | null> {
+    return this.client.get(key);
+  }
+
+  async set(key: string, value: string, ttlSeconds: number): Promise<void> {
+    await this.client.set(key, value, 'EX', ttlSeconds);
+  }
+
+  async del(key: string): Promise<void> {
+    await this.client.del(key);
+  }
+
+  // ── Domain helpers ────────────────────────────────────────────────────────
+
   async saveConversationHistory(patientPhone: string, history: any[]): Promise<void> {
     try {
       const key = `conv:${patientPhone}`;
