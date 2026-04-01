@@ -5,6 +5,7 @@ import { Clinic, PersonaType } from '@prisma/client';
 import { CalendarService } from '../../calendar/calendar.service';
 import { AsaasService } from '../../asaas/asaas.service';
 import { PrismaService } from '../../../infrastructure/database/prisma.service';
+import { CryptoService } from '../../../services/crypto.service';
 
 export interface PatientContext {
   id: string;
@@ -35,6 +36,7 @@ export class SerenaService {
     private readonly calendarService: CalendarService,
     private readonly asaasService: AsaasService,
     private readonly prisma: PrismaService,
+    private readonly cryptoService: CryptoService,
   ) {
     this.openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
@@ -437,6 +439,14 @@ Se o paciente quiser reagendar um procedimento que JÁ PAGOU ou relatar erro no 
       });
 
       this.logger.log(`[SERENA] Pix gerado — Invoice: ${pixResult.asaasInvoiceId}, Appointment: ${pixResult.appointmentId}`);
+
+      // Persiste o CPF criptografado no registro do paciente (LGPD)
+      if (args.patient_cpf) {
+        await this.prisma.patient.update({
+          where: { id: patientContext.id },
+          data: { cpfEncrypted: this.cryptoService.encrypt(args.patient_cpf) },
+        }).catch((err) => this.logger.error(`[SERENA] Falha ao salvar CPF criptografado: ${err.message}`));
+      }
 
       return (
         `Pix gerado com sucesso.\n` +

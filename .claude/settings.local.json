@@ -5,7 +5,12 @@
       "Bash(npx tsc:*)",
       "Bash(ls -la /c/Users/Pichau/Desktop/_/symetra-os/apps/web/*.*)",
       "Bash(grep -E \"\\\\.\\(ts|js|json|css|mjs\\)$\")",
-      "Bash(pnpm build:*)"
+      "Bash(pnpm build:*)",
+      "Bash(grep -r \"from.*prisma\\\\|import.*Prisma\" /c/Users/guilherme.oliveira/Desktop/symetra-core/apps --include=*.ts --include=*.tsx)",
+      "Bash(mkdir:*)",
+      "Bash(pnpm --filter api exec prisma generate)",
+      "Bash(grep -r \"cpfEncrypted\\\\|patient\\\\.cpf\\\\|cpfEncrypted =\" /c/Users/guilherme.oliveira/Desktop/symetra-core/apps/api/src --include=*.ts)"
     ]
-  }
+  },
+  "spinnerTipsEnabled": false
 }

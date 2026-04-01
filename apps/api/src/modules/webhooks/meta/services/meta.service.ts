@@ -1,10 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { HttpService } from '@nestjs/axios';
-import { firstValueFrom } from 'rxjs';
 import { PrismaService } from '../../../../infrastructure/database/prisma.service';
 import { SerenaService, SerenaAction } from '../../../serena/services/serena.service';
 import { RedisService } from '../../../redis/redis.service';
 import { WhatsAppService } from './whatsapp.service';
+import { AsaasService } from '../../../asaas/asaas.service';
+import { CryptoService } from '../../../../services/crypto.service';
 
 interface IncomingContext {
   messageId: string;
@@ -29,11 +29,12 @@ export class MetaWebhookService {
   }>();
 
   constructor(
-    private readonly httpService: HttpService,
     private readonly prisma: PrismaService,
     private readonly serenaService: SerenaService,
     private readonly redisService: RedisService,
     private readonly whatsAppService: WhatsAppService,
+    private readonly asaasService: AsaasService,
+    private readonly cryptoService: CryptoService,
   ) {}
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -204,13 +205,12 @@ export class MetaWebhookService {
     try {
       this.logger.log(`[MOTOR] Iniciando trava de agenda e geração de Pix para ${patientPhone}`);
 
-      const lockedUntilDate = new Date(Date.now() + 15 * 60 * 1000);
-
+      // Trava atômica de 15 minutos criada antes de chamar o Asaas
       const appointment = await this.prisma.appointment.create({
         data: {
           procedureName: bookingData.procedure,
           scheduledAt: new Date(bookingData.target_date),
-          lockedUntil: lockedUntilDate,
+          lockedUntil: new Date(Date.now() + 15 * 60 * 1000),
           clinicId: clinic.id,
           patientId: patientId,
           status: 'PENDING',
@@ -224,39 +224,41 @@ export class MetaWebhookService {
         return;
       }
 
-      const customerRes = await firstValueFrom(
-        this.httpService.post('https://api.asaas.com/v3/customers', {
-          name: bookingData.patient_name || 'Paciente Symetra',
-          phone: patientPhone,
-        }, { headers: { access_token: asaasApiKey } })
+      // Lê CPF criptografado do paciente e descriptografa apenas para uso na chamada externa (Asaas)
+      const patientRecord = await this.prisma.patient.findUnique({
+        where: { id: patientId },
+        select: { cpfEncrypted: true },
+      });
+      const patientCpf = patientRecord?.cpfEncrypted
+        ? this.cryptoService.decrypt(patientRecord.cpfEncrypted) ?? ''
+        : '';
+
+      const customerId = await this.asaasService.findOrCreateCustomer(
+        patientCpf,
+        bookingData.patient_name || 'Paciente Symetra',
+        patientPhone,
+        asaasApiKey,
       );
 
-      const chargeRes = await firstValueFrom(
-        this.httpService.post('https://api.asaas.com/v3/payments', {
-          customer: customerRes.data.id,
-          billingType: 'PIX',
-          value: clinic.reservationFee,
-          dueDate: new Date().toISOString().split('T')[0],
-          description: `Reserva de Horário - ${clinic.name}`,
-        }, { headers: { access_token: asaasApiKey } })
+      const paymentId = await this.asaasService.createPayment(
+        customerId,
+        clinic.reservationFee,
+        asaasApiKey,
+        { description: `Reserva de Horário - ${clinic.name}` },
       );
 
-      const qrCodeRes = await firstValueFrom(
-        this.httpService.get(`https://api.asaas.com/v3/payments/${chargeRes.data.id}/pixQrCode`, {
-          headers: { access_token: asaasApiKey }
-        })
-      );
+      const pixCode = await this.asaasService.getPix(paymentId, asaasApiKey);
 
       await this.prisma.appointment.update({
         where: { id: appointment.id },
-        data: { asaasInvoiceId: chargeRes.data.id },
+        data: { asaasInvoiceId: paymentId },
       });
 
       const msg = `Para formalizarmos sua reserva no dia ${new Date(bookingData.target_date).toLocaleString('pt-BR')}, o sistema requer a validação do aporte de garantia (R$ ${clinic.reservationFee},00).\n\nAbaixo envio a chave Pix (Copia e Cola) exclusiva para esta transação.\n\nA vaga permanece reservada em seu nome pelos próximos 15 minutos.`;
 
       await Promise.all([
         this.whatsAppService.sendMessage(clinic.whatsappNumberId, patientPhone, msg),
-        this.whatsAppService.sendMessage(clinic.whatsappNumberId, patientPhone, qrCodeRes.data.payload),
+        this.whatsAppService.sendMessage(clinic.whatsappNumberId, patientPhone, pixCode),
       ]);
 
       this.logger.log(`[SUCESSO] Agenda travada e Pix enviado para ${patientPhone}`);

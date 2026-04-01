@@ -1,8 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import axios from 'axios';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 
-const ASAAS_BASE_URL = process.env.ASAAS_BASE_URL
+const ASAAS_BASE_URL = process.env.ASAAS_BASE_URL;
+
 export interface PixChargeInput {
   clinicId: string;
   patientId: string;
@@ -27,72 +28,144 @@ export class AsaasService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async createPixCharge(input: PixChargeInput): Promise<PixChargeResult> {
-    const {
-      clinicId,
-      patientId,
-      patientName,
-      patientCpf,
-      patientPhone,
-      procedure,
-      scheduledAt,
-      asaasApiKey,
-      reservationFee,
-    } = input;
+  // ── PUBLIC API ──────────────────────────────────────────────────────────────
 
-    // Blindagem da chave — falha explícita antes de qualquer chamada HTTP
-    if (!asaasApiKey || asaasApiKey.trim() === '') {
-      throw new Error('API Key do Asaas ausente na Clínica');
+  async findOrCreateCustomer(cpf: string, name: string, phone: string, asaasApiKey: string): Promise<string> {
+    const headers = { access_token: asaasApiKey };
+
+    try {
+      const searchRes = await axios.get(`${ASAAS_BASE_URL}/customers`, {
+        headers,
+        params: { mobilePhone: phone },
+      });
+
+      const existing = searchRes.data?.data;
+      if (Array.isArray(existing) && existing.length > 0) {
+        const existingId = existing[0].id as string;
+        this.logger.log(`[ASAAS] Customer existente encontrado: ${existingId}`);
+
+        if (cpf) {
+          try {
+            await axios.post(`${ASAAS_BASE_URL}/customers/${existingId}`, { cpfCnpj: cpf }, { headers });
+            this.logger.log(`[ASAAS] CPF actualizado no Customer ${existingId}`);
+          } catch (updateError) {
+            const details = this.extractErrorDetails(updateError);
+            this.logger.error(`[ASAAS] Erro ao actualizar CPF do Customer ${existingId}: ${details}`);
+            throw new HttpException(
+              `Asaas: falha ao atualizar CPF — ${details}`,
+              updateError.response?.status ?? HttpStatus.BAD_GATEWAY,
+            );
+          }
+        }
+
+        return existingId;
+      }
+    } catch (err) {
+      if (err instanceof HttpException) throw err;
+      // search failed — proceed to create
     }
 
-    const sanitizedKey = asaasApiKey.trim();
-    const headers = { access_token: sanitizedKey };
-
-    // 1. Verificar/Criar Customer no Asaas (com CPF)
-    const customerId = await this.findOrCreateCustomer(patientName, patientPhone, patientCpf, headers);
-
-    // 2. Criar Payment (PIX)
-    const today = new Date().toISOString().split('T')[0];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let paymentRes: { data: any };
     try {
-      paymentRes = await axios.post(
+      const createRes = await axios.post(
+        `${ASAAS_BASE_URL}/customers`,
+        { name, mobilePhone: phone, cpfCnpj: cpf },
+        { headers },
+      );
+      this.logger.log(`[ASAAS] Novo Customer criado: ${createRes.data.id}`);
+      return createRes.data.id as string;
+    } catch (error) {
+      const details = this.extractErrorDetails(error);
+      this.logger.error(`[ASAAS] Erro ao criar Customer (CPF possivelmente inválido): ${details}`);
+      throw new HttpException(
+        `Asaas: falha ao criar customer — ${details}`,
+        error.response?.status ?? HttpStatus.BAD_GATEWAY,
+      );
+    }
+  }
+
+  async createPayment(
+    customerId: string,
+    value: number,
+    asaasApiKey: string,
+    options?: { dueDate?: string; description?: string; externalReference?: string },
+  ): Promise<string> {
+    const headers = { access_token: asaasApiKey };
+    const dueDate = options?.dueDate ?? new Date().toISOString().split('T')[0];
+
+    try {
+      const paymentRes = await axios.post(
         `${ASAAS_BASE_URL}/payments`,
         {
           customer: customerId,
           billingType: 'PIX',
-          value: reservationFee,
-          dueDate: today,
-          description: `Reserva de Horário - ${procedure}`,
-          externalReference: `${clinicId}:${patientId}`,
+          value,
+          dueDate,
+          ...(options?.description && { description: options.description }),
+          ...(options?.externalReference && { externalReference: options.externalReference }),
         },
         { headers },
       );
+      const paymentId = paymentRes.data.id as string;
+      this.logger.log(`[ASAAS] Payment criado: ${paymentId}`);
+      return paymentId;
     } catch (error) {
-      const errorDetails = error.response?.data
-        ? JSON.stringify(error.response.data)
-        : error.message;
-      this.logger.error(`[ASAAS] Erro ao criar Payment: ${errorDetails}`);
-      throw error;
+      const details = this.extractErrorDetails(error);
+      this.logger.error(`[ASAAS] Erro ao criar Payment: ${details}`);
+      throw new HttpException(
+        `Asaas: falha ao criar payment — ${details}`,
+        error.response?.status ?? HttpStatus.BAD_GATEWAY,
+      );
+    }
+  }
+
+  async getPix(paymentId: string, asaasApiKey: string): Promise<string> {
+    const headers = { access_token: asaasApiKey };
+    try {
+      const qrCodeRes = await axios.get(`${ASAAS_BASE_URL}/payments/${paymentId}/pixQrCode`, { headers });
+      const pixCode = qrCodeRes.data.payload as string;
+      if (!pixCode) {
+        throw new HttpException(
+          `Asaas não retornou o payload do Pix para o pagamento ${paymentId}`,
+          HttpStatus.BAD_GATEWAY,
+        );
+      }
+      this.logger.log(`[ASAAS] Pix Copia e Cola obtido para ${paymentId}`);
+      return pixCode;
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      const details = this.extractErrorDetails(error);
+      this.logger.error(`[ASAAS] Erro ao obter Pix QR Code: ${details}`);
+      throw new HttpException(
+        `Asaas: falha ao obter pixQrCode — ${details}`,
+        error.response?.status ?? HttpStatus.BAD_GATEWAY,
+      );
+    }
+  }
+
+  // ── HIGH-LEVEL COMPOSITE (usado pela Serena) ────────────────────────────────
+
+  async createPixCharge(input: PixChargeInput): Promise<PixChargeResult> {
+    const {
+      clinicId, patientId, patientName, patientCpf, patientPhone,
+      procedure, scheduledAt, asaasApiKey, reservationFee,
+    } = input;
+
+    if (!asaasApiKey || asaasApiKey.trim() === '') {
+      throw new HttpException('API Key do Asaas ausente na Clínica', HttpStatus.BAD_REQUEST);
     }
 
-    const asaasInvoiceId: string = paymentRes.data.id;
-    this.logger.log(`[ASAAS] Payment criado: ${asaasInvoiceId}`);
+    const sanitizedKey = asaasApiKey.trim();
 
-    // 3. Obter Pix Copia e Cola
-    const qrCodeRes = await axios.get(
-      `${ASAAS_BASE_URL}/payments/${asaasInvoiceId}/pixQrCode`,
-      { headers },
-    );
-    const pixCode: string = qrCodeRes.data.payload;
+    const customerId = await this.findOrCreateCustomer(patientCpf, patientName, patientPhone, sanitizedKey);
 
-    if (!pixCode) {
-      throw new Error(`Asaas não retornou o payload do Pix para o pagamento ${asaasInvoiceId}`);
-    }
+    const asaasInvoiceId = await this.createPayment(customerId, reservationFee, sanitizedKey, {
+      description: `Reserva de Horário - ${procedure}`,
+      externalReference: `${clinicId}:${patientId}`,
+    });
 
-    this.logger.log(`[ASAAS] Pix Copia e Cola obtido para ${asaasInvoiceId}`);
+    const pixCode = await this.getPix(asaasInvoiceId, sanitizedKey);
 
-    // 4. Salvar Agendamento no banco com trava de 15 minutos
+    // Salvar Agendamento no banco com trava de 15 minutos
     const appointment = await this.prisma.appointment.create({
       data: {
         clinicId,
@@ -110,62 +183,10 @@ export class AsaasService {
     return { pixCode, appointmentId: appointment.id, asaasInvoiceId };
   }
 
-  private async findOrCreateCustomer(
-    name: string,
-    phone: string,
-    cpf: string,
-    headers: Record<string, string>,
-  ): Promise<string> {
-    try {
-      const searchRes = await axios.get(`${ASAAS_BASE_URL}/customers`, {
-        headers,
-        params: { mobilePhone: phone },
-      });
+  // ── PRIVATE HELPERS ─────────────────────────────────────────────────────────
 
-      const existing = searchRes.data?.data;
-      if (Array.isArray(existing) && existing.length > 0) {
-        const existingId = existing[0].id as string;
-        this.logger.log(`[ASAAS] Customer existente encontrado: ${existingId}`);
-
-        // Atualiza o CPF no registo existente antes de gerar o Pix
-        if (cpf) {
-          try {
-            await axios.post(
-              `${ASAAS_BASE_URL}/customers/${existingId}`,
-              { cpfCnpj: cpf },
-              { headers },
-            );
-            this.logger.log(`[ASAAS] CPF actualizado no Customer ${existingId}`);
-          } catch (updateError) {
-            const errorDetails = updateError.response?.data
-              ? JSON.stringify(updateError.response.data)
-              : updateError.message;
-            this.logger.error(`[ASAAS] Erro ao actualizar CPF do Customer ${existingId}: ${errorDetails}`);
-            throw updateError;
-          }
-        }
-
-        return existingId;
-      }
-    } catch {
-      // search failed — proceed to create
-    }
-
-    try {
-      const createRes = await axios.post(
-        `${ASAAS_BASE_URL}/customers`,
-        { name, mobilePhone: phone, cpfCnpj: cpf },
-        { headers },
-      );
-
-      this.logger.log(`[ASAAS] Novo Customer criado: ${createRes.data.id}`);
-      return createRes.data.id as string;
-    } catch (error) {
-      const errorDetails = error.response?.data
-        ? JSON.stringify(error.response.data)
-        : error.message;
-      this.logger.error(`[ASAAS] Erro ao criar Customer (CPF possivelmente inválido): ${errorDetails}`);
-      throw error;
-    }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private extractErrorDetails(error: any): string {
+    return error.response?.data ? JSON.stringify(error.response.data) : error.message;
   }
 }
