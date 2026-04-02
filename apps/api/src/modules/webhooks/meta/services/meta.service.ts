@@ -4,7 +4,7 @@ import { SerenaService, SerenaAction } from '../../../serena/services/serena.ser
 import { RedisService } from '../../../redis/redis.service';
 import { WhatsAppService } from './whatsapp.service';
 import { AsaasService } from '../../../asaas/asaas.service';
-import { CryptoService } from '../../../../services/crypto.service';
+import { CryptoService } from '../../../../infrastructure/crypto/crypto.service';
 
 interface IncomingContext {
   messageId: string;

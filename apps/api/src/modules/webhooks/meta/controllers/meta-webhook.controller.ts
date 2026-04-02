@@ -2,7 +2,7 @@ import { Controller, Get, Post, Body, Query, Res, HttpStatus, UseGuards } from '
 import { ConfigService } from '@nestjs/config';
 import type { Response } from 'express';
 import { MetaWebhookService } from '../services/meta.service';
-import { MetaSignatureGuard } from '../../../../webhooks/guards/meta-signature.guard';
+import { MetaSignatureGuard } from '../../../webhooks/guards/meta-signature.guard';
 
 @Controller('webhooks/meta')
 export class MetaWebhookController {

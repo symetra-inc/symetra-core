@@ -18,16 +18,16 @@ export class CryptoService {
    */
   encrypt(plainText: string): string | null {
     if (!plainText) return null;
-    
+
     // O IV (Initialization Vector) garante que o mesmo CPF gere hashes diferentes
     const iv = crypto.randomBytes(16);
     const cipher = crypto.createCipheriv(this.algorithm, Buffer.from(this.key), iv);
-    
+
     let encrypted = cipher.update(plainText, 'utf8', 'hex');
     encrypted += cipher.final('hex');
-    
+
     const authTag = cipher.getAuthTag().toString('hex');
-    
+
     // Guardamos o IV, o AuthTag e o conteúdo encriptado separados por ':'
     return `${iv.toString('hex')}:${authTag}:${encrypted}`;
   }

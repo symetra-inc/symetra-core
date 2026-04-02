@@ -2,11 +2,11 @@ import { Module } from '@nestjs/common';
 import { SerenaService } from './services/serena.service';
 import { CalendarModule } from '../calendar/calendar.module';
 import { AsaasModule } from '../asaas/asaas.module';
-import { CryptoService } from '../../services/crypto.service';
+import { CryptoModule } from '../../infrastructure/crypto/crypto.module';
 
 @Module({
-  imports: [CalendarModule, AsaasModule],
-  providers: [SerenaService, CryptoService],
+  imports: [CalendarModule, AsaasModule, CryptoModule],
+  providers: [SerenaService],
   exports: [SerenaService],
 })
 export class SerenaModule {}

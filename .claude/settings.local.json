@@ -10,7 +10,9 @@
       "Bash(mkdir:*)",
       "Bash(pnpm --filter api exec prisma generate)",
       "Bash(grep -r \"cpfEncrypted\\\\|patient\\\\.cpf\\\\|cpfEncrypted =\" /c/Users/guilherme.oliveira/Desktop/symetra-core/apps/api/src --include=*.ts)",
-      "Bash(npx prisma:*)"
+      "Bash(npx prisma:*)",
+      "Bash(rm \"c:/Users/Pichau/Desktop/_/symetra-os/apps/api/src/guards/asaas-webhook.guard.ts\")",
+      "Bash(rmdir \"c:/Users/Pichau/Desktop/_/symetra-os/apps/api/src/guards\")"
     ]
   },
   "spinnerTipsEnabled": false

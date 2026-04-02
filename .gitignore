@@ -1,6 +1,7 @@
 # Dependências
 node_modules/
 .pnpm-store/
+package-lock.json
 
 # IDEs e Sistema
 .vscode/

@@ -1,10 +1,10 @@
 import { Controller, Post, Body, HttpCode, HttpStatus, Logger, UseGuards } from '@nestjs/common';
 import { AsaasWebhookService } from '../services/asaas.service';
 import { asaasPayloadSchema } from '../dto/asaas-payload.dto';
-import { AsaasWebhookGuard } from '../../../../webhooks/guards/asaas-webhook.guard';
+import { AsaasWebhookGuard } from '../../../webhooks/guards/asaas-webhook.guard';
 
 const PAYMENT_CONFIRMED_EVENTS = new Set(['PAYMENT_RECEIVED', 'PAYMENT_CONFIRMED']);
-const PAYMENT_REFUSED_EVENTS = new Set(['PAYMENT_REFUSED', 'PAYMENT_DELETED', 'PAYMENT_OVERDUE']);
+const PAYMENT_REFUSED_EVENTS = new Set(['PAYMENT_REFUSED', 'PAYMENT_DELETED']);
 
 @Controller('webhooks/asaas')
 export class AsaasWebhookController {
@@ -31,9 +31,11 @@ export class AsaasWebhookController {
       await this.asaasService.processPaymentConfirmed(payment.id);
     } else if (PAYMENT_REFUSED_EVENTS.has(event)) {
       await this.asaasService.processPaymentRefused(payment.id);
+    } else if (event === 'PAYMENT_OVERDUE') {
+      this.logger.warn(`[WEBHOOK] Pix vencido para invoice ${payment.id}. CronJob irá limpar.`);
     } else {
       this.logger.log(`[WEBHOOK] Evento ignorado silenciosamente: ${event}`);
-    }
+    } 
 
     return { status: 'received' };
   }

@@ -8,9 +8,9 @@ import { MetaWebhookModule } from './modules/webhooks/meta/meta.module';
 import { RedisModule } from './modules/redis/redis.module';
 import { CalendarModule } from './modules/calendar/calendar.module';
 import { CleanupModule } from './modules/cleanup/cleanup.module';
-import { CryptoService } from './services/crypto.service';
+import { CryptoModule } from './infrastructure/crypto/crypto.module';
 import { WhatsAppModule } from './modules/whatsapp/whatsapp.module';
-import { MuteService } from './modules/mute/mute.service';
+import { MuteModule } from './modules/mute/mute.module';
 
 @Module({
   imports: [
@@ -24,7 +24,9 @@ import { MuteService } from './modules/mute/mute.service';
     MetaWebhookModule,
     CleanupModule,
     WhatsAppModule,
+    MuteModule,
+    CryptoModule,
   ],
-  providers: [CryptoService, MuteService],
+  providers: [],
 })
 export class AppModule {}

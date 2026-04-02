@@ -5,7 +5,7 @@ import { Clinic, PersonaType } from '@prisma/client';
 import { CalendarService } from '../../calendar/calendar.service';
 import { AsaasService } from '../../asaas/asaas.service';
 import { PrismaService } from '../../../infrastructure/database/prisma.service';
-import { CryptoService } from '../../../services/crypto.service';
+import { CryptoService } from '../../../infrastructure/crypto/crypto.service';
 
 export interface PatientContext {
   id: string;
