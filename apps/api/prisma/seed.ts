@@ -1,74 +1,99 @@
-import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcryptjs';
+import { PrismaClient, UserRole, PersonaType } from "@prisma/client";
+import * as bcrypt from "bcrypt";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Iniciando injeção de dados do Symetra Protocol...');
+  const passwordHash = await bcrypt.hash("Symetra123", 10);
 
-  const passwordHash = await bcrypt.hash('symetra123', 10);
-
-  // 1. Cria a Agência Parceira
+  // 1. Agência
   const agency = await prisma.agency.create({
     data: {
-      name: 'Agência V8',
-      tier: 'SILVER',
+      name: "Agência Demo",
+      cnpj: "12345678000100",
+      commissionRate: 0.2,
     },
   });
 
-  // 2. Cria a Clínica (Vinculada à Agência)
+  // 2. Clínica (vinculada à agência)
   const clinic = await prisma.clinic.create({
     data: {
-      name: 'Instituto Facial',
-      whatsapp_number_id: '5511999999999', // Fictício
-      agency_id: agency.id,
+      agencyId: agency.id,
+      name: "Clínica Demo",
+      doctorName: "Dr. João Silva",
+      whatsappNumberId: "997298506807975",
+      asaasApiKey:
+        "$aact_hmlg_000MzkwODA2MWY2OGM3MWRlMDU2NWM3MzJlNzZmNGZhZGY6OmViNjM5ZDg4LWZkMTQtNGE2NC05YmIwLWFjNWQ5MmY0OWFkYzo6JGFhY2hfZTI0NTkwM2ItNTBmZC00YjU4LWE4YzgtNzA0MGIxOWY0Mjlh",
+      persona: PersonaType.SOFISTICADA,
+      knowledgeBase: "Base de conhecimento da clínica demo para testes.",
+      catalog: {
+        procedures: [
+          { name: "Botox", price: 1200 },
+          { name: "Preenchimento Labial", price: 2500 },
+          { name: "Limpeza de Pele", price: 350 },
+        ],
+      },
+      reservationFee: 100.0,
+      receptionistPhone: "5511999999999",
+      receptionistName: "Maria",
     },
   });
 
-  // 3. Cria o CEO (Sem vínculo, ele vê tudo)
-  const admin = await prisma.user.create({
-    data: {
-      email: 'ceo@symetra.com',
-      name: 'Guilherme (CEO)',
-      passwordHash,
-      role: 'SUPER_ADMIN',
+  // 3. Usuários — um de cada role
+  const users = [
+    {
+      name: "Master Symetra",
+      email: "master@email.com",
+      role: UserRole.MASTER,
+      clinicId: null,
+      agencyId: null,
     },
-  });
-
-  // 4. Cria o Usuário da Agência (Vinculado à Agência V8)
-  const agencyUser = await prisma.user.create({
-    data: {
-      email: 'contato@agenciav8.com',
-      name: 'Diretor V8',
-      passwordHash,
-      role: 'AGENCY',
-      agency_id: agency.id,
+    {
+      name: "Admin Agência",
+      email: "agencia@email.com",
+      role: UserRole.AGENCY_ADMIN,
+      clinicId: null,
+      agencyId: agency.id,
     },
-  });
-
-  // 5. Cria o Usuário da Clínica (Vinculado ao Instituto Facial)
-  const clinicUser = await prisma.user.create({
-    data: {
-      email: 'dr@institutofacial.com',
-      name: 'Dr. Roberto',
-      passwordHash,
-      role: 'CLINIC',
-      clinic_id: clinic.id,
+    {
+      name: "Admin Clínica",
+      email: "clinica@email.com",
+      role: UserRole.CLINIC_ADMIN,
+      clinicId: clinic.id,
+      agencyId: null,
     },
-  });
+    {
+      name: "Recepcionista",
+      email: "recepcionista@email.com",
+      role: UserRole.RECEPTIONIST,
+      clinicId: clinic.id,
+      agencyId: null,
+    },
+  ];
 
-  console.log('✅ Cofre abastecido com sucesso e Entidades Relacionadas!');
-  console.log(`- Admin: ${admin.email}`);
-  console.log(`- Agência: ${agencyUser.email}`);
-  console.log(`- Clínica: ${clinicUser.email}`);
-  console.log('Senha padrão para todos: symetra123');
+  for (const u of users) {
+    await prisma.user.create({
+      data: {
+        name: u.name,
+        email: u.email,
+        password: passwordHash,
+        role: u.role,
+        clinicId: u.clinicId,
+        agencyId: u.agencyId,
+      },
+    });
+  }
+
+  console.log("✅ Seed concluído!");
+  console.log(`   Agência:  ${agency.id}`);
+  console.log(`   Clínica:  ${clinic.id}`);
+  console.log(`   Usuários: master | agencia | clinica | recepcionista`);
+  console.log(`   Senha:    Symetra123`);
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Erro na injeção:', e);
+    console.error("❌ Erro no seed:", e);
     process.exit(1);
   })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+  .finally(() => prisma.$disconnect());

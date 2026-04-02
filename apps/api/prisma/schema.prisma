@@ -163,6 +163,8 @@ model Appointment {
   handoffTime        DateTime? // Quando a secretária assumiu
   slaViolated        Boolean   @default(false) // Se demorou > 10 min pós-Pix
 
+  googleEventId      String?   // ID do evento no Google Calendar
+
   // Rastreio de Agência (CMO)
   utmSource          String?
   utmMedium          String?

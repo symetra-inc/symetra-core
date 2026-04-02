@@ -1,7 +1,7 @@
 import { Controller, Post, Body, HttpCode, HttpStatus, Logger, UseGuards } from '@nestjs/common';
 import { AsaasWebhookService } from '../services/asaas.service';
 import { asaasPayloadSchema } from '../dto/asaas-payload.dto';
-import { AsaasWebhookGuard } from '../../../../../webhooks/guards/asaas-webhook.guard';
+import { AsaasWebhookGuard } from '../../../../webhooks/guards/asaas-webhook.guard';
 
 const PAYMENT_CONFIRMED_EVENTS = new Set(['PAYMENT_RECEIVED', 'PAYMENT_CONFIRMED']);
 const PAYMENT_REFUSED_EVENTS = new Set(['PAYMENT_REFUSED', 'PAYMENT_DELETED', 'PAYMENT_OVERDUE']);

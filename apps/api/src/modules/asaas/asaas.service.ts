@@ -4,6 +4,7 @@ import { PrismaService } from '../../infrastructure/database/prisma.service';
 
 const ASAAS_BASE_URL = process.env.ASAAS_BASE_URL;
 
+
 export interface PixChargeInput {
   clinicId: string;
   patientId: string;
@@ -90,7 +91,9 @@ export class AsaasService {
     options?: { dueDate?: string; description?: string; externalReference?: string },
   ): Promise<string> {
     const headers = { access_token: asaasApiKey };
-    const dueDate = options?.dueDate ?? new Date().toISOString().split('T')[0];
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const dueDate = options?.dueDate ?? tomorrow.toISOString().split('T')[0];
 
     try {
       const paymentRes = await axios.post(
@@ -143,6 +146,32 @@ export class AsaasService {
   }
 
   // ── HIGH-LEVEL COMPOSITE (usado pela Serena) ────────────────────────────────
+
+  async deletePayment(paymentId: string, asaasApiKey: string): Promise<void> {
+    const headers = { access_token: asaasApiKey.trim() };
+    try {
+      await axios.delete(`${ASAAS_BASE_URL}/payments/${paymentId}`, { headers });
+      this.logger.log(`[ASAAS] Payment ${paymentId} deletado com sucesso.`);
+    } catch (error) {
+      const details = this.extractErrorDetails(error);
+
+      if (error.response?.status === 404) {
+        this.logger.log(`[ASAAS] Payment ${paymentId} já deletado.`);
+        return;
+      }
+
+      if (error.response?.status === 400) {
+        this.logger.warn(`[ASAAS] Payment ${paymentId} não pôde ser deletado (estado incompatível): ${details}`);
+        return;
+      }
+
+      this.logger.error(`[ASAAS] Erro ao deletar Payment ${paymentId}: ${details}`);
+      throw new HttpException(
+        `Asaas: falha ao deletar payment — ${details}`,
+        error.response?.status ?? HttpStatus.BAD_GATEWAY,
+      );
+    }
+  }
 
   async createPixCharge(input: PixChargeInput): Promise<PixChargeResult> {
     const {

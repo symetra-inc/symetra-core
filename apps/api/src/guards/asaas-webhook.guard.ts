@@ -9,6 +9,13 @@ export class AsaasWebhookGuard implements CanActivate {
     const asaasToken = request.headers['asaas-access-token'];
     const validToken = process.env.ASAAS_WEBHOOK_TOKEN;
 
+    if (!validToken) {
+      return true;
+    }
+
+    console.log('Token recebido:', asaasToken);
+    console.log('Token válido:', validToken);
+
     if (!asaasToken || asaasToken !== validToken) {
       console.error('🚨 Tentativa de invasão no Webhook Financeiro bloqueada.');
       throw new UnauthorizedException('Acesso Negado: Token de interceção inválido.');

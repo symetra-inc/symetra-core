@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../../infrastructure/database/prisma.service';
 import { WhatsAppService } from '../../../webhooks/meta/services/whatsapp.service';
+import { CalendarService } from '../../../calendar/calendar.service';
 
 @Injectable()
 export class AsaasWebhookService {
@@ -9,6 +10,7 @@ export class AsaasWebhookService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly whatsAppService: WhatsAppService,
+    private readonly calendarService: CalendarService,
   ) {}
 
   // ── PAYMENT_RECEIVED / PAYMENT_CONFIRMED ─────────────────────────────────────
@@ -44,6 +46,20 @@ export class AsaasWebhookService {
       throw dbError;
     }
 
+    const googleEventId = await this.calendarService.createEvent({
+      patientName: appointment.patient.name,
+      patientPhone: appointment.patient.whatsappPhone,
+      procedureName: appointment.procedureName,
+      scheduledAt: appointment.scheduledAt,
+    });
+
+    if (googleEventId) {
+      await this.prisma.appointment.update({
+        where: { id: appointment.id },
+        data: { googleEventId },
+      }).catch((err: any) => this.logger.error(`[DB] Falha ao salvar googleEventId: ${err.message}`));
+    }
+
     await this.sendPaymentConfirmation(appointment);
   }
 
@@ -77,6 +93,10 @@ export class AsaasWebhookService {
       this.logger.log(`[WEBHOOK] Agendamento ${appointment.id} → CANCELLED (pagamento recusado).`);
     } catch (dbError) {
       this.logger.error(`[WEBHOOK] FALHA ao cancelar agendamento ${appointment.id}: ${dbError.message}`);
+    }
+
+    if ((appointment as any).googleEventId) {
+      await this.calendarService.deleteEvent((appointment as any).googleEventId);
     }
 
     const msg =
