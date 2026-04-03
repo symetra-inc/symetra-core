@@ -2,9 +2,13 @@ import { ShieldCheck, Trophy, AlertTriangle, CheckCircle2, CircleDashed } from "
 import { Inter } from "next/font/google";
 import { getAgencyMetrics } from "./actions";
 
+export default async function Page() {
+  return <AgencyDashboard />;
+}
+
 const inter = Inter({ subsets: ["latin"], weight: ["300", "400", "500", "600", "700"] });
 
-export default async function AgencyDashboard() {
+export async function AgencyDashboard() {
   const metrics = await getAgencyMetrics();
 
   return (

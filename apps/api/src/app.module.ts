@@ -11,6 +11,10 @@ import { CleanupModule } from './modules/cleanup/cleanup.module';
 import { CryptoModule } from './infrastructure/crypto/crypto.module';
 import { WhatsAppModule } from './modules/whatsapp/whatsapp.module';
 import { MuteModule } from './modules/mute/mute.module';
+import { AppointmentsModule } from './modules/appointments/appointments.module';
+import { AuthModule } from './auth/auth.module';
+import { ClinicsModule } from './modules/clinics/clinics.module';
+import { PatientsModule } from './modules/patients/patients.module';
 
 @Module({
   imports: [
@@ -26,6 +30,10 @@ import { MuteModule } from './modules/mute/mute.module';
     WhatsAppModule,
     MuteModule,
     CryptoModule,
+    AppointmentsModule,
+    AuthModule,
+    ClinicsModule,
+    PatientsModule,
   ],
   providers: [],
 })

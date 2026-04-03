@@ -2,10 +2,9 @@
 
 import { signIn } from "@/auth";
 import { AuthError } from "next-auth";
-import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma"; // Trazemos o banco para cá
+import { prisma } from "@/lib/prisma"; 
 
-export async function authenticate(prevState: string | undefined, formData: FormData) {
+  export async function authenticate(prevState: string | undefined, formData: FormData) {
   const email = formData.get("email") as string;
   let targetRoute = "/dashboard"; // Rota padrão (Clínica)
 

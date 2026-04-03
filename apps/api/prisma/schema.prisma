@@ -165,6 +165,9 @@ model Appointment {
 
   googleEventId      String?   // ID do evento no Google Calendar
 
+  // Handoff / IA
+  isAiMuted          Boolean  @default(false) // Secretária assumiu o atendimento
+
   // Rastreio de Agência (CMO)
   utmSource          String?
   utmMedium          String?

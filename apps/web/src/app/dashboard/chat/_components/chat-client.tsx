@@ -13,6 +13,8 @@ import {
   Send,
   UserCircle,
   BanknoteArrowUp,
+  BotOff,
+  Timer,
 } from "lucide-react";
 import {
   type PatientRow,
@@ -85,6 +87,72 @@ function formatMessageTime(isoString: string): string {
 // ─────────────────────────────────────────────
 // SUB-COMPONENTES
 // ─────────────────────────────────────────────
+
+function AiStatusBadge({ isAiMuted }: { isAiMuted: boolean }) {
+  if (isAiMuted) {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-red-500/10 text-red-400 border border-red-500/20">
+        <BotOff className="w-2.5 h-2.5" />
+        IA silenciada
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+      <Sparkles className="w-2.5 h-2.5" />
+      Serena ativa
+    </span>
+  );
+}
+
+function SlaTimer({
+  createdAt,
+  handoffTime,
+}: {
+  createdAt: string;
+  handoffTime: string | null;
+}) {
+  const [elapsed, setElapsed] = useState(() =>
+    Date.now() - new Date(createdAt).getTime()
+  );
+
+  useEffect(() => {
+    if (handoffTime) return; // congela quando há handoff
+    const id = setInterval(
+      () => setElapsed(Date.now() - new Date(createdAt).getTime()),
+      60_000
+    );
+    return () => clearInterval(id);
+  }, [createdAt, handoffTime]);
+
+  const totalMin = Math.floor(elapsed / 60_000);
+  const h = Math.floor(totalMin / 60);
+  const min = totalMin % 60;
+  const label = h > 0 ? `${h}h ${min}min` : `${totalMin}min`;
+
+  const isPulsing = !handoffTime && totalMin >= 8;
+  const color =
+    totalMin < 8
+      ? "text-emerald-400"
+      : totalMin < 15
+        ? "text-amber-400"
+        : "text-red-400";
+
+  return (
+    <span
+      className={`inline-flex items-center gap-1 text-[10px] font-mono font-medium px-1.5 py-0.5 rounded-md border ${
+        totalMin < 8
+          ? "bg-emerald-500/10 border-emerald-500/20"
+          : totalMin < 15
+            ? "bg-amber-500/10 border-amber-500/20"
+            : "bg-red-500/10 border-red-500/20"
+      } ${color} ${isPulsing ? "animate-pulse" : ""}`}
+    >
+      <Timer className="w-2.5 h-2.5" />
+      {label}
+    </span>
+  );
+}
 
 function PatientItem({
   patient,
@@ -193,13 +261,19 @@ function MessageBubble({ message }: { message: MessageRow }) {
 // COMPONENTE PRINCIPAL
 // ─────────────────────────────────────────────
 
-export function ChatClient({ initialPatients }: { initialPatients: PatientRow[] }) {
+export function ChatClient({
+  initialPatients,
+  initialPatientId = null,
+}: {
+  initialPatients: PatientRow[];
+  initialPatientId?: string | null;
+}) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(
-    initialPatients[0]?.id ?? null
+    initialPatientId ?? initialPatients[0]?.id ?? null
   );
   const [messages, setMessages] = useState<MessageRow[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
@@ -414,6 +488,17 @@ export function ChatClient({ initialPatients }: { initialPatients: PatientRow[] 
                       </>
                     );
                   })()}
+                </div>
+                <div className="flex items-center gap-1.5 mt-1">
+                  {selectedPatient.lastAppointmentIsAiMuted !== null && (
+                    <AiStatusBadge isAiMuted={selectedPatient.lastAppointmentIsAiMuted} />
+                  )}
+                  {selectedPatient.lastAppointmentCreatedAt && (
+                    <SlaTimer
+                      createdAt={selectedPatient.lastAppointmentCreatedAt}
+                      handoffTime={selectedPatient.lastAppointmentHandoffTime}
+                    />
+                  )}
                 </div>
               </div>
             </div>

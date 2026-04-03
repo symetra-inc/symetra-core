@@ -12,7 +12,17 @@
       "Bash(grep -r \"cpfEncrypted\\\\|patient\\\\.cpf\\\\|cpfEncrypted =\" /c/Users/guilherme.oliveira/Desktop/symetra-core/apps/api/src --include=*.ts)",
       "Bash(npx prisma:*)",
       "Bash(rm \"c:/Users/Pichau/Desktop/_/symetra-os/apps/api/src/guards/asaas-webhook.guard.ts\")",
-      "Bash(rmdir \"c:/Users/Pichau/Desktop/_/symetra-os/apps/api/src/guards\")"
+      "Bash(rmdir \"c:/Users/Pichau/Desktop/_/symetra-os/apps/api/src/guards\")",
+      "Skill(update-config)",
+      "Bash(node -e \"require\\('jsonwebtoken'\\); console.log\\('ok'\\)\")",
+      "Bash(node -e \"require\\('jose'\\); console.log\\('ok'\\)\")",
+      "Bash(pnpm --filter api add @nestjs/jwt)",
+      "Bash(node -e \"require\\('jose'\\); console.log\\('jose ok'\\)\")",
+      "Bash(node -e \"require\\('@nestjs/jwt'\\); console.log\\('ok'\\)\")",
+      "Bash(ls C:/Users/Pichau/Desktop/_/symetra-os/node_modules/.pnpm/next*/node_modules/next/dist/docs/)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\({k:v for k,v in {**d.get\\('dependencies',{}\\),**d.get\\('devDependencies',{}\\)}.items\\(\\)}, indent=2\\)\\)\")",
+      "Bash(pnpm --filter web add jose)",
+      "Bash(pnpm --filter web add recharts)"
     ]
   },
   "spinnerTipsEnabled": false

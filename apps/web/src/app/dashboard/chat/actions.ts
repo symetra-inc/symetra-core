@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { getMessages as apiGetMessages } from "@/lib/api";
 
 // ─── Tipos serializáveis (Date → string para passar Server → Client) ──────────
 
@@ -17,6 +18,12 @@ export type PatientRow = {
   lastMessageAt: string;
   /** Status do agendamento mais recente (PENDING | PAID | COMPLETED | CANCELLED | null) */
   lastAppointmentStatus: string | null;
+  /** Se a IA está silenciada no agendamento mais recente */
+  lastAppointmentIsAiMuted: boolean | null;
+  /** ISO string de criação do agendamento mais recente (para timer de SLA) */
+  lastAppointmentCreatedAt: string | null;
+  /** ISO string do handoff do agendamento mais recente (null = sem handoff ainda) */
+  lastAppointmentHandoffTime: string | null;
 };
 
 export type MessageRow = {
@@ -28,6 +35,11 @@ export type MessageRow = {
 
 // ─── Queries ──────────────────────────────────────────────────────────────────
 
+/**
+ * TODO: migrar para GET /clinics/:id/patients quando o endpoint incluir
+ * lastMessage e lastMessageAt (dados de mensagens por paciente).
+ * Por ora mantém Prisma direto pois a API não retorna esses campos.
+ */
 export async function getPatients(): Promise<PatientRow[]> {
   const patients = await prisma.patient.findMany({
     include: {
@@ -47,13 +59,15 @@ export async function getPatients(): Promise<PatientRow[]> {
       id: p.id,
       name: p.name,
       whatsappPhone: p.whatsappPhone,
-      // Cast necessário até próximo `prisma generate` após db push
       botPaused: (p as any).botPaused ?? false,
       requiresHuman: (p as any).requiresHuman ?? false,
       lastMessage: (p as any).messages[0]?.content ?? null,
       lastMessageAt:
         ((p as any).messages[0]?.createdAt ?? p.createdAt).toISOString(),
       lastAppointmentStatus: p.appointments[0]?.status ?? null,
+      lastAppointmentIsAiMuted: p.appointments[0]?.isAiMuted ?? null,
+      lastAppointmentCreatedAt: p.appointments[0]?.createdAt.toISOString() ?? null,
+      lastAppointmentHandoffTime: p.appointments[0]?.handoffTime?.toISOString() ?? null,
     }))
     .sort(
       (a, b) =>
@@ -62,27 +76,23 @@ export async function getPatients(): Promise<PatientRow[]> {
     );
 }
 
+/** Migrado para GET /patients/:id/messages via api.ts */
 export async function getPatientMessages(patientId: string): Promise<MessageRow[]> {
-  // Cast necessário até próximo `prisma generate` após db push
-  const messages = await (prisma as any).message.findMany({
-    where: { patientId },
-    orderBy: { createdAt: "asc" },
-  });
-
-  return messages.map((m: any) => ({
-    id: m.id,
-    role: m.role as "USER" | "AI" | "HUMAN",
+  const result = await apiGetMessages(patientId);
+  return result.messages.map((m, i) => ({
+    // Mensagens do Redis não têm id nem createdAt — geramos valores sintéticos
+    id: m.id ?? `msg-${i}`,
+    role: m.role as MessageRow["role"],
     content: m.content,
-    createdAt: m.createdAt.toISOString(),
+    createdAt: m.createdAt ?? new Date().toISOString(),
   }));
 }
 
 // ─── Mutations ────────────────────────────────────────────────────────────────
 
 /**
- * Alterna o estado do bot para um paciente.
- * pause=true  → bot silenciado, humano assume
- * pause=false → bot retoma o atendimento
+ * TODO: migrar para PATCH /patients/:id/status quando o endpoint existir.
+ * Mantém Prisma direto — não há endpoint na API para alterar botPaused/requiresHuman.
  */
 export async function toggleBotStatus(
   patientId: string,
@@ -91,7 +101,6 @@ export async function toggleBotStatus(
   await prisma.patient.update({
     where: { id: patientId },
     data: {
-      // Cast necessário até próximo `prisma generate` após db push
       ...(({ botPaused: pause, requiresHuman: pause } as any)),
     },
   });
@@ -99,9 +108,8 @@ export async function toggleBotStatus(
 }
 
 /**
- * Grava uma mensagem enviada pela secretária humana.
- * Também pausa o bot automaticamente.
  * @deprecated use sendManualMessage — não envia ao WhatsApp
+ * TODO: remover após confirmar que não há mais chamadas externas.
  */
 export async function sendHumanMessage(
   patientId: string,
@@ -127,16 +135,13 @@ export async function sendHumanMessage(
 }
 
 /**
- * Envia uma mensagem manual da secretária:
- * 1. Grava no banco com role 'HUMAN'
- * 2. Dispara a mensagem REAL no celular do paciente via Meta Cloud API
- * 3. Pausa o bot automaticamente
+ * TODO: migrar para POST /patients/:id/messages quando o endpoint existir.
+ * Por ora mantém Prisma + chamada direta à Meta API — lógica complexa sem endpoint correspondente.
  */
 export async function sendManualMessage(
   patientId: string,
   content: string
 ): Promise<MessageRow> {
-  // Busca paciente + clínica para pegar os dados de envio
   const patient = await prisma.patient.findUnique({
     where: { id: patientId },
     include: { clinic: true },
@@ -144,18 +149,15 @@ export async function sendManualMessage(
 
   if (!patient) throw new Error(`Paciente ${patientId} não encontrado.`);
 
-  // 1. Persiste no histórico
   const msg = await (prisma as any).message.create({
     data: { patientId, role: "HUMAN", content },
   });
 
-  // 2. Pausa o bot
   await prisma.patient.update({
     where: { id: patientId },
     data: { ...(({ botPaused: true, requiresHuman: true } as any)) },
   });
 
-  // 3. Envia ao WhatsApp do paciente via Meta Cloud API
   const token = process.env.META_WA_TOKEN;
   const clinicPhoneId = patient.clinic.whatsappNumberId;
 
@@ -179,7 +181,6 @@ export async function sendManualMessage(
         }
       );
     } catch {
-      // Falha no envio não reverte o registro — já foi salvo no histórico
       console.error("[sendManualMessage] Falha ao enviar via Meta API");
     }
   }

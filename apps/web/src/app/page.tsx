@@ -293,6 +293,10 @@ export default function Home() {
             const [href, label] = item.split(':')
             return <a key={href} href={href} className="text-xs text-[#9C8E82] hover:text-[#F5F0E8] transition-colors no-underline tracking-wide">{label}</a>
           })}
+          <a href="/login"
+             className="text-xs text-[#9C8E82] hover:text-[#F5F0E8] transition-colors no-underline tracking-wide">
+            Entrar
+          </a>
           <a href={WA_ACCESS} target="_blank" rel="noopener noreferrer"
              className="text-[11px] font-medium tracking-wider px-5 py-2 rounded-sm no-underline transition-all hover:opacity-85 hover:-translate-y-px"
              style={{ color: '#0E0C0A', background: '#C5A059' }}>

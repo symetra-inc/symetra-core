@@ -1,5 +1,6 @@
 import { Calendar } from "lucide-react";
 
+
 type AppointmentStatus = "PAID" | "PENDING" | "CANCELLED";
 
 interface Appointment {

@@ -2,8 +2,12 @@
 
 import { prisma } from "@/lib/prisma";
 
+/**
+ * TODO: migrar para endpoint de agência na REST API quando existir.
+ * Requer: GET /agencies/:id/metrics com dados de clínicas e agendamentos consolidados.
+ * Por ora mantém Prisma direto — não há endpoint correspondente na API NestJS.
+ */
 export async function getAgencyMetrics() {
-  // Fetch the first agency with its clinics and appointments
   const agency = await prisma.agency.findFirst({
     include: {
       clinics: {
@@ -34,12 +38,10 @@ export async function getAgencyMetrics() {
   const targetGold = 16;
   const tierProgress = Math.min((activeClinicsCount / targetGold) * 100, 100);
 
-  // Derive tier from clinics count
   let tier = "Bronze";
   if (activeClinicsCount >= 16) tier = "Gold";
   else if (activeClinicsCount >= 8) tier = "Silver";
 
-  // Check setup completeness
   let isSetupComplete = activeClinicsCount > 0;
   let missingMeta = false;
   let missingAsaas = false;
@@ -49,7 +51,6 @@ export async function getAgencyMetrics() {
     if (!clinic.asaasApiKey) { missingAsaas = true; isSetupComplete = false; }
   }
 
-  // Financial calculations
   let totalPaidAppointments = 0;
   let totalRetainedRevenue = 0;
 
@@ -69,7 +70,7 @@ export async function getAgencyMetrics() {
     isSetupComplete,
     missingMeta,
     missingAsaas,
-    totalLeads: 0, // No leads model yet
+    totalLeads: 0,
     totalPaidAppointments,
     agencyMargin,
     clinics: agency.clinics,
