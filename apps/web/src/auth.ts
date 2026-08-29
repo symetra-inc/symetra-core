@@ -14,11 +14,13 @@ declare module "next-auth" {
       id: string;
       role: string;
       clinicId: string | null;
+      agencyId: string | null;
     } & DefaultSession["user"];
   }
   interface User {
     role: string;
     clinicId: string | null;
+    agencyId: string | null;
   }
 }
 
@@ -27,6 +29,7 @@ declare module "next-auth/jwt" {
     id: string;
     role: string;
     clinicId: string | null;
+    agencyId: string | null;
   }
 }
 
@@ -82,7 +85,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         const user = await prisma.user.findUnique({
           where: { email },
-          select: { id: true, email: true, name: true, role: true, password: true, clinicId: true },
+          select: { id: true, email: true, name: true, role: true, password: true, clinicId: true, agencyId: true },
         });
 
         if (!user) return null;
@@ -96,6 +99,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           name: user.name,
           role: user.role,
           clinicId: user.clinicId,
+          agencyId: user.agencyId,
         };
       },
     }),
@@ -106,6 +110,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.id = user.id!;
         token.role = user.role;
         token.clinicId = user.clinicId;
+        token.agencyId = user.agencyId;
       }
       return token;
     },
@@ -113,6 +118,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       session.user.id = token.id;
       session.user.role = token.role;
       session.user.clinicId = token.clinicId;
+      session.user.agencyId = token.agencyId;
       return session;
     },
   },

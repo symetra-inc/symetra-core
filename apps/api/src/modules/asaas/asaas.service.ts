@@ -1,6 +1,7 @@
 import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import axios from 'axios';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { isValidCpf, normalizeCpf } from '../../common/utils/cpf.util';
 
 const ASAAS_BASE_URL = process.env.ASAAS_BASE_URL;
 
@@ -15,6 +16,9 @@ export interface PixChargeInput {
   scheduledAt: Date;
   asaasApiKey: string;
   reservationFee: number;
+  durationMinutes?: number;
+  symetraSplitValue?: number;
+  symetraSplitWalletId?: string;
 }
 
 export interface PixChargeResult {
@@ -88,7 +92,13 @@ export class AsaasService {
     customerId: string,
     value: number,
     asaasApiKey: string,
-    options?: { dueDate?: string; description?: string; externalReference?: string },
+    options?: {
+      dueDate?: string;
+      description?: string;
+      externalReference?: string;
+      symetraSplitValue?: number;
+      symetraSplitWalletId?: string;
+    },
   ): Promise<string> {
     const headers = { access_token: asaasApiKey };
     const tomorrow = new Date();
@@ -105,6 +115,14 @@ export class AsaasService {
           dueDate,
           ...(options?.description && { description: options.description }),
           ...(options?.externalReference && { externalReference: options.externalReference }),
+          ...(options?.symetraSplitWalletId && options?.symetraSplitValue && {
+            split: [
+              {
+                walletId: options.symetraSplitWalletId,
+                fixedValue: options.symetraSplitValue,
+              },
+            ],
+          }),
         },
         { headers },
       );
@@ -176,20 +194,27 @@ export class AsaasService {
   async createPixCharge(input: PixChargeInput): Promise<PixChargeResult> {
     const {
       clinicId, patientId, patientName, patientCpf, patientPhone,
-      procedure, scheduledAt, asaasApiKey, reservationFee,
+      procedure, scheduledAt, asaasApiKey, reservationFee, durationMinutes,
+      symetraSplitValue, symetraSplitWalletId,
     } = input;
 
     if (!asaasApiKey || asaasApiKey.trim() === '') {
       throw new HttpException('API Key do Asaas ausente na Clínica', HttpStatus.BAD_REQUEST);
     }
 
-    const sanitizedKey = asaasApiKey.trim();
+    if (!isValidCpf(patientCpf)) {
+      throw new HttpException('CPF_INVALID', HttpStatus.UNPROCESSABLE_ENTITY);
+    }
 
-    const customerId = await this.findOrCreateCustomer(patientCpf, patientName, patientPhone, sanitizedKey);
+    const sanitizedKey = asaasApiKey.trim();
+    const normalizedCpf = normalizeCpf(patientCpf);
+
+    const customerId = await this.findOrCreateCustomer(normalizedCpf, patientName, patientPhone, sanitizedKey);
 
     const asaasInvoiceId = await this.createPayment(customerId, reservationFee, sanitizedKey, {
       description: `Reserva de Horário - ${procedure}`,
       externalReference: `${clinicId}:${patientId}`,
+      ...(symetraSplitWalletId && symetraSplitValue && { symetraSplitWalletId, symetraSplitValue }),
     });
 
     const pixCode = await this.getPix(asaasInvoiceId, sanitizedKey);
@@ -200,6 +225,7 @@ export class AsaasService {
         clinicId,
         patientId,
         procedureName: procedure,
+        durationMinutes: durationMinutes ?? 60,
         scheduledAt,
         status: 'PENDING',
         lockedUntil: new Date(Date.now() + 15 * 60_000),

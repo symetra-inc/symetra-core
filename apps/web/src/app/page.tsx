@@ -52,7 +52,7 @@ const STEPS: StepItem[] = [
   { n: '02', title: 'Qualificação e quebra de objeção',   desc: 'Extração de interesse, identificação do procedimento, manejo de objeções de preço. Zero negociação manual. Zero diagnóstico médico.' },
   { n: '03', title: 'Agenda verificada em tempo real',    desc: 'A Serena consulta o Google Calendar da clínica antes de sugerir horários. Sem conflitos, sem promessas que não se cumprem.' },
   { n: '04', title: 'Pix gerado · agenda travada 15 min', desc: 'Pix Copia e Cola enviado via WhatsApp. Slot travado atomicamente. Sem pagamento confirmado, o horário é liberado e a conversa encerra.' },
-  { n: '05', title: 'Handoff com contexto completo',      desc: 'Asaas confirma o Pix. Secretária recebe resumo da conversa no WhatsApp. SLA começa. Você atende quem já pagou.' },
+  { n: '05', title: 'Handoff com contexto completo',      desc: 'Asaas confirma o Pix. Recepcionista recebe resumo da conversa no WhatsApp. SLA começa. Você atende quem já pagou.' },
 ]
 
 /* ── Micro-components ── */
@@ -273,7 +273,7 @@ export default function Home() {
     <div className={`${fraunces.variable} ${instrument.variable} ${jetbrains.variable} min-h-screen bg-[#0E0C0A] text-[#F5F0E8] overflow-x-hidden`}
          style={{ fontFamily: 'var(--font-instrument, sans-serif)', WebkitFontSmoothing: 'antialiased' }}>
 
-      {/* Crosshair */}
+      {/* Crosshair — hidden on touch devices */}
       <div ref={chTopRef} className="ch ch-v" />
       <div ref={chBotRef} className="ch ch-v" />
       <div ref={chLftRef} className="ch ch-h" />
@@ -284,29 +284,58 @@ export default function Home() {
       <canvas ref={canvasRef} id="particles" />
 
       {/* ── HEADER ── */}
-      <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-12 py-5 border-b border-[rgba(156,142,130,0.18)] bg-[rgba(14,12,10,0.88)] backdrop-blur-lg">
-        <div style={{ fontFamily: 'var(--font-fraunces)', fontSize: '1.2rem', fontWeight: 700, letterSpacing: '-.01em' }}>
-          Syme<em style={{ fontStyle: 'italic', fontWeight: 400, color: '#C5A059' }}>tra</em>
+      <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between md:grid md:grid-cols-3 px-6 md:px-12 py-5 border-b border-[rgba(156,142,130,0.18)] bg-[rgba(14,12,10,0.88)] backdrop-blur-lg">
+        
+        {/* Esquerda: Logo */}
+        <div className="justify-self-start">
+          <div style={{ fontFamily: 'var(--font-fraunces)', fontSize: '1.2rem', fontWeight: 700, letterSpacing: '-.01em' }}>
+            Syme<em style={{ fontStyle: 'italic', fontWeight: 400, color: '#C5A059' }}>tra</em>
+          </div>
         </div>
-        <nav className="flex items-center gap-9">
-          {['#mechanism:Como funciona', '#proof:Dashboard', '#agency:Agências'].map(item => {
-            const [href, label] = item.split(':')
-            return <a key={href} href={href} className="text-xs text-[#9C8E82] hover:text-[#F5F0E8] transition-colors no-underline tracking-wide">{label}</a>
-          })}
-          <a href="/login"
-             className="text-xs text-[#9C8E82] hover:text-[#F5F0E8] transition-colors no-underline tracking-wide">
-            Entrar
-          </a>
+
+        {/* Centro: CTA Principal (Visível em telas médias/grandes) */}
+        <div className="hidden md:flex justify-self-center">
           <a href={WA_ACCESS} target="_blank" rel="noopener noreferrer"
              className="text-[11px] font-medium tracking-wider px-5 py-2 rounded-sm no-underline transition-all hover:opacity-85 hover:-translate-y-px"
              style={{ color: '#0E0C0A', background: '#C5A059' }}>
             Solicitar acesso
           </a>
+        </div>
+
+        {/* Direita: Navegação e Entrar */}
+        <nav className="flex items-center justify-end gap-5 md:gap-8 justify-self-end">
+          
+          {/* Âncoras de página (Ocultas no mobile para priorizar o CTA e o Login) */}
+          <div className="hidden lg:flex items-center gap-8">
+            {['#mechanism:Como funciona', '#proof:Dashboard', '#agency:Agências'].map(item => {
+              const [href, label] = item.split(':')
+              return <a key={href} href={href} className="text-xs text-[#9C8E82] hover:text-[#F5F0E8] transition-colors no-underline tracking-wide">{label}</a>
+            })}
+          </div>
+          
+          {/* Botão Entrar segregado (Sublinhado sutil e ícone) */}
+          <a href="/login"
+             className="group flex items-center gap-1.5 text-xs text-[#C5A059] hover:text-[#F5F0E8] transition-all no-underline tracking-wide pb-0.5 border-b border-[rgba(197,160,89,0.3)] hover:border-[#F5F0E8]">
+            Entrar
+            <svg className="w-3 h-3 opacity-80 group-hover:opacity-100 transition-opacity" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+              <polyline points="10 17 15 12 10 7"/>
+              <line x1="15" y1="12" x2="3" y2="12"/>
+            </svg>
+          </a>
+
+          {/* CTA Mobile (Aparece apenas em telas pequenas, menor para caber na tela) */}
+          <a href={WA_ACCESS} target="_blank" rel="noopener noreferrer"
+             className="md:hidden text-[10px] font-medium tracking-wider px-3 py-1.5 rounded-sm no-underline transition-all hover:opacity-85"
+             style={{ color: '#0E0C0A', background: '#C5A059' }}>
+            Acesso
+          </a>
         </nav>
+
       </header>
 
       {/* ── HERO ── */}
-      <section id="hero" className="relative z-10 min-h-screen grid grid-cols-2 items-center gap-16 px-12 pt-32 pb-20">
+      <section id="hero" className="relative z-10 min-h-screen grid grid-cols-1 md:grid-cols-2 items-center gap-8 md:gap-16 px-6 md:px-12 pt-24 md:pt-32 pb-16 md:pb-20">
         <div className="max-w-xl">
           <div className="hero-eyebrow flex items-center gap-2.5 mb-8">
             <span className="w-5 h-px" style={{ background: 'rgba(197,160,89,.5)' }} />
@@ -331,7 +360,7 @@ export default function Home() {
             Solicitar acesso restrito <ArrowIcon />
           </a>
 
-          <div className="hero-stats flex gap-10 mt-10 pt-8 border-t border-[rgba(156,142,130,0.18)]">
+          <div className="hero-stats flex flex-wrap gap-6 md:gap-10 mt-10 pt-8 border-t border-[rgba(156,142,130,0.18)]">
             {[['R$ 0', 'em no-shows pós-Pix'], ['15 min', 'trava atômica'], ['100%', 'multi-tenant LGPD']].map(([val, lbl]) => (
               <div key={lbl}>
                 <div className="text-[1.1rem] font-medium text-[#C5A059]" style={{ fontFamily: 'var(--font-jetbrains)' }}>{val}</div>
@@ -342,7 +371,7 @@ export default function Home() {
         </div>
 
         {/* Pix stack */}
-        <div className="hero-right relative h-[540px] flex items-center justify-center">
+        <div className="hero-right relative h-[300px] md:h-[540px] flex items-center justify-center">
           {PIX_LABELS.map((amt, i) => (
             <div key={i} ref={el => { pnRefs.current[i] = el }}
                  className="pn bg-[#1A1714] rounded-[10px] p-3 flex items-center gap-2.5 min-w-[220px]"
@@ -366,7 +395,7 @@ export default function Home() {
       </section>
 
       {/* ── STATEMENT ── */}
-      <section id="statement" className="relative z-10 min-h-[80vh] flex items-center justify-center px-12 py-32 overflow-hidden">
+      <section id="statement" className="relative z-10 min-h-[80vh] flex items-center justify-center px-6 md:px-12 py-16 md:py-32 overflow-hidden">
         <div ref={stmtBgRef} className="stmt-bg text-[clamp(7rem,16vw,15rem)] font-bold tracking-tight"
              style={{ fontFamily: 'var(--font-fraunces)', color: 'rgba(197,160,89,.025)' }}>
           NO-SHOW
@@ -389,12 +418,12 @@ export default function Home() {
       </section>
 
       {/* ── MECHANISM ── */}
-      <section id="mechanism" className="relative z-10 px-12 py-32 max-w-[1160px] mx-auto">
+      <section id="mechanism" className="relative z-10 px-6 md:px-12 py-16 md:py-32 max-w-[1160px] mx-auto">
         <div className="sec-lbl sec-entry flex items-center gap-3 mb-16">
           <span className="w-7 h-px" style={{ background: 'rgba(197,160,89,.4)' }} />
           <span className="text-[9px] tracking-[.2em] uppercase text-[#9C8E82]" style={{ fontFamily: 'var(--font-jetbrains)' }}>O fluxo Symetra</span>
         </div>
-        <div className="sec-entry grid grid-cols-2 gap-20 items-center">
+        <div className="sec-entry grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-20 items-center">
           <div className="flex flex-col">
             {STEPS.map((s, i) => (
               <div key={i} onClick={() => setActiveStep(i)}
@@ -424,14 +453,14 @@ export default function Home() {
       </section>
 
       {/* ── PROOF ── */}
-      <section id="proof" className="relative z-10 px-12 py-32">
-        <div className="max-w-[1160px] mx-auto mb-14 flex items-end justify-between reveal">
+      <section id="proof" className="relative z-10 px-6 md:px-12 py-16 md:py-32">
+        <div className="max-w-[1160px] mx-auto mb-14 flex flex-col md:flex-row md:items-end md:justify-between gap-4 reveal">
           <h2 className="text-[clamp(2.2rem,3.8vw,3.2rem)] font-bold leading-[1.05] tracking-tight"
               style={{ fontFamily: 'var(--font-fraunces)' }}>
-            O que a secretária vê<br />quando o{' '}
+            O que a recepcionista vê<br />quando o{' '}
             <em style={{ fontStyle: 'italic', fontWeight: 400, color: '#C5A059' }}>Pix</em> cai.
           </h2>
-          <p className="text-xs text-[#9C8E82] max-w-[260px] text-right leading-relaxed">Contexto completo, SLA visível, zero pergunta repetida.</p>
+          <p className="text-xs text-[#9C8E82] md:max-w-[260px] md:text-right leading-relaxed">Contexto completo, SLA visível, zero pergunta repetida.</p>
         </div>
 
         <div className="max-w-[1160px] mx-auto bg-[#1A1714] rounded-2xl overflow-hidden reveal"
@@ -445,8 +474,8 @@ export default function Home() {
               app.symetra.com.br/dashboard
             </span>
           </div>
-          <div className="grid grid-cols-[210px_1fr] min-h-[480px]">
-            <div className="bg-[#242018] border-r border-[rgba(156,142,130,.18)] p-5">
+          <div className="grid grid-cols-1 md:grid-cols-[210px_1fr] min-h-[480px]">
+            <div className="hidden md:block bg-[#242018] border-r border-[rgba(156,142,130,.18)] p-5">
               <div className="text-[.9rem] font-bold mb-6 pb-4 border-b border-[rgba(156,142,130,.18)]" style={{ fontFamily: 'var(--font-fraunces)' }}>
                 Syme<em style={{ fontStyle: 'italic', fontWeight: 400, color: '#C5A059' }}>tra</em>
               </div>
@@ -458,7 +487,7 @@ export default function Home() {
               ))}
             </div>
             <div className="p-6">
-              <div className="grid grid-cols-4 gap-2.5 mb-5">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 mb-5">
                 {[
                   { lbl: 'VRC Hoje',  val: 'R$ 2.100', gold: true,  d: '↑ 7 reservas' },
                   { lbl: 'Conversão', val: '68%',       gold: false, d: '↑ leads → PAID' },
@@ -473,7 +502,7 @@ export default function Home() {
                   </div>
                 ))}
               </div>
-              <div className="bg-[#242018] rounded-lg overflow-hidden" style={{ border: '.5px solid rgba(156,142,130,.18)' }}>
+              <div className="hidden md:block bg-[#242018] rounded-lg overflow-hidden" style={{ border: '.5px solid rgba(156,142,130,.18)' }}>
                 <div className="grid grid-cols-[2fr_2fr_1fr_1fr_1fr] px-4 py-2 border-b border-[rgba(156,142,130,.18)]">
                   {['Paciente', 'Procedimento', 'Status', 'Valor', 'SLA'].map(h => (
                     <span key={h} className="text-[9px] uppercase tracking-wider text-[#9C8E82]">{h}</span>
@@ -503,8 +532,8 @@ export default function Home() {
       </section>
 
       {/* ── AGENCY ── */}
-      <section id="agency" className="relative z-10 px-12 py-32 bg-[#F5F0E8]">
-        <div className="max-w-[1000px] mx-auto grid grid-cols-2 gap-24 items-center">
+      <section id="agency" className="relative z-10 px-6 md:px-12 py-16 md:py-32 bg-[#F5F0E8]">
+        <div className="max-w-[1000px] mx-auto grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-24 items-center">
           <div className="reveal">
             <div className="text-[9px] tracking-[.2em] uppercase mb-5" style={{ fontFamily: 'var(--font-jetbrains)', color: '#A8854A' }}>
               Programa de parceria - Você não é o problema<em style={{ fontStyle: 'italic', fontWeight: 400, color: '#C5A059' }}>tra</em>
@@ -567,7 +596,7 @@ export default function Home() {
       </section>
 
       {/* ── FINAL CTA ── */}
-      <section id="final-cta" className="relative z-10 min-h-[65vh] flex items-center justify-center px-12 py-32 text-center overflow-hidden">
+      <section id="final-cta" className="relative z-10 min-h-[65vh] flex items-center justify-center px-6 md:px-12 py-20 md:py-32 text-center overflow-hidden">
         <div className="cta-ring" style={{ width: 640, height: 640 }} />
         <div className="cta-ring" style={{ width: 420, height: 420, borderColor: 'rgba(197,160,89,.09)' }} />
         <div className="cta-ring" style={{ width: 230, height: 230, borderColor: 'rgba(197,160,89,.13)' }} />
@@ -584,7 +613,7 @@ export default function Home() {
             Sem compromisso. A demo é ao vivo:<br />WhatsApp → Serena → Pix → Dashboard.
           </p>
           <a href={WA_ACCESS} target="_blank" rel="noopener noreferrer"
-             className="inline-flex items-center gap-3 text-sm font-medium tracking-wide px-10 py-4 rounded no-underline transition-all hover:-translate-y-0.5"
+             className="inline-flex items-center gap-3 text-sm font-medium tracking-wide px-6 md:px-10 py-4 rounded no-underline transition-all hover:-translate-y-0.5"
              style={{ color: '#0E0C0A', background: '#C5A059' }}>
             Solicitar acesso à infraestrutura <ArrowIcon />
           </a>
@@ -592,7 +621,7 @@ export default function Home() {
       </section>
 
       {/* ── FOOTER ── */}
-      <footer className="relative z-10 px-12 py-6 flex items-center justify-between border-t border-[rgba(156,142,130,.18)]">
+      <footer className="relative z-10 px-6 md:px-12 py-6 flex flex-col md:flex-row items-center justify-between gap-3 md:gap-0 border-t border-[rgba(156,142,130,.18)]">
         <span className="text-[10px] text-[#9C8E82]">
           <span style={{ fontFamily: 'var(--font-fraunces)', fontStyle: 'italic', color: '#F5F0E8' }}>Symetra</span> Inc. © 2026
         </span>

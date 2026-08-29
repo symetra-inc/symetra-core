@@ -1,7 +1,41 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { PersonaType } from '@prisma/client';
 import { PrismaService } from '../../../../infrastructure/database/prisma.service';
 import { WhatsAppService } from '../../../webhooks/meta/services/whatsapp.service';
 import { CalendarService } from '../../../calendar/calendar.service';
+import { NotificationService } from '../../../notification/notification.service';
+
+// ── Mensagem de confirmação de pagamento por persona ──────────────────────────
+
+function getPaymentConfirmationMessage(
+  persona: PersonaType | string,
+  appointment: { procedureName: string; scheduledAt: Date },
+): string {
+  const tz = 'America/Sao_Paulo';
+  const data = new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit', month: '2-digit', year: 'numeric', timeZone: tz,
+  }).format(appointment.scheduledAt);
+  const hora = new Intl.DateTimeFormat('pt-BR', {
+    hour: '2-digit', minute: '2-digit', timeZone: tz,
+  }).format(appointment.scheduledAt);
+  const proc = appointment.procedureName;
+
+  const messages: Record<string, string> = {
+    [PersonaType.SOFISTICADA]:
+      `✨ Pagamento confirmado. Seu horário para *${proc}* em *${data} às ${hora}* está reservado.\n` +
+      `Em breve nossa recepcionista entrará em contato para confirmar os detalhes finais.\nAté lá! 🤍`,
+    [PersonaType.ARISTOCRATA]:
+      `Confirmamos o recebimento do seu pagamento.\n` +
+      `O agendamento de *${proc}* para *${data} às ${hora}* está devidamente registrado.\n` +
+      `Nossa recepcionista estará em contato em instantes para os próximos passos.`,
+    [PersonaType.ESPECIALISTA]:
+      `Pagamento recebido com sucesso! ✅\n` +
+      `Sua consulta de *${proc}* está confirmada para *${data} às ${hora}*.\n` +
+      `Nossa recepcionista vai te contatar em breve para alinhar os detalhes. Qualquer dúvida, pode perguntar!`,
+  };
+
+  return messages[persona] ?? messages[PersonaType.SOFISTICADA];
+}
 
 @Injectable()
 export class AsaasWebhookService {
@@ -11,6 +45,7 @@ export class AsaasWebhookService {
     private readonly prisma: PrismaService,
     private readonly whatsAppService: WhatsAppService,
     private readonly calendarService: CalendarService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   // ── PAYMENT_RECEIVED / PAYMENT_CONFIRMED ─────────────────────────────────────
@@ -46,11 +81,22 @@ export class AsaasWebhookService {
       throw dbError;
     }
 
+    // Coerção explícita: o cast `as any` existe porque o Prisma client pode estar com tipos
+    // desatualizados em relação ao schema. Number() protege contra null e serialização como string.
+    const rawDuration = (appointment as any).durationMinutes;
+    const appointmentDuration = Number(rawDuration) || 60;
+    if (!rawDuration) {
+      this.logger.warn(
+        `[WEBHOOK] durationMinutes ausente no appointment ${appointment.id} — usando fallback 60min`,
+      );
+    }
+
     const googleEventId = await this.calendarService.createEvent({
       patientName: appointment.patient.name,
       patientPhone: appointment.patient.whatsappPhone,
       procedureName: appointment.procedureName,
       scheduledAt: appointment.scheduledAt,
+      durationMinutes: appointmentDuration,
     });
 
     if (googleEventId) {
@@ -127,20 +173,15 @@ export class AsaasWebhookService {
     procedureName: string;
     scheduledAt: Date;
     patient: { id: string; whatsappPhone: string; name: string };
-    clinic: { whatsappNumberId: string; name: string };
+    clinic: {
+      whatsappNumberId: string;
+      name: string;
+      persona: PersonaType;
+      receptionistPhone: string | null;
+      receptionistName: string | null;
+    };
   }): Promise<void> {
-    const formattedDate = appointment.scheduledAt.toLocaleString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZone: 'America/Sao_Paulo',
-    });
-
-    const message =
-      `🎉 Pagamento confirmado! Sua vaga para *${appointment.procedureName}* no dia *${formattedDate}* está 100% garantida.\n\n` +
-      `Qualquer dúvida, é só falar. Nos vemos lá! ✨`;
+    const message = getPaymentConfirmationMessage(appointment.clinic.persona, appointment);
 
     this.logger.log(
       `[WEBHOOK] Chamando o WhatsAppService para enviar confirmação de pagamento para ${appointment.patient.whatsappPhone} ` +
@@ -153,6 +194,16 @@ export class AsaasWebhookService {
         message,
       );
       this.logger.log(`[WEBHOOK] Mensagem de confirmação enviada com sucesso para ${appointment.patient.whatsappPhone}`);
+
+      // Notifica a recepcionista (fire-and-forget)
+      this.notificationService.notifySecretary({
+        clinicWhatsappNumberId: appointment.clinic.whatsappNumberId,
+        receptionistPhone: appointment.clinic.receptionistPhone,
+        receptionistName: appointment.clinic.receptionistName,
+        patientName: appointment.patient.name,
+        patientPhone: appointment.patient.whatsappPhone,
+        handoffSummary: appointment.procedureName,
+      });
     } catch (waError) {
       this.logger.error(`[WEBHOOK] FALHA FATAL ao enviar WhatsApp (CONFIRMED): ${waError.message}`);
     }

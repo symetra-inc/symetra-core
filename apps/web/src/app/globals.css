@@ -1,36 +1,37 @@
 @import "tailwindcss";
 
 @theme {
-  /* Brutalist Dark Palette */
-  --color-onyx: #0F0F0F;
-  --color-zinc-panel: #18181B;
-  --color-gold: #C5A059;
-  --color-sec: #27272A;
+  /* ── Symetra Brand Palette ──────────────────────────────────────────────── */
+  --color-ink:      #0E0C0A;
+  --color-ink2:     #1A1714;
+  --color-ink3:     #242018;
+  --color-linen:    #F5F0E8;
+  --color-ash:      #9C8E82;
+  --color-gold:     #C5A059;
+  --color-gold-mid: #A8854A;
 
-  /* Legacy aliases */
-  --color-background: #0F0F0F;
-  --color-foreground: #FAFAFA;
-  --color-muted: #71717A;
-  --color-accent: #C5A059;
-
-  --font-serif: var(--font-playfair), ui-serif, Georgia, serif;
-  --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  /* ── Typography ─────────────────────────────────────────────────────────── */
+  --font-display: var(--font-fraunces), Georgia, serif;
+  --font-ui:      var(--font-instrument), system-ui, sans-serif;
+  --font-data:    var(--font-jetbrains), 'Courier New', monospace;
 }
 
 @layer base {
   :root {
     color-scheme: dark;
+    --stone:    rgba(156, 142, 130, 0.18);
+    --gold-dim: rgba(197, 160, 89, 0.12);
   }
 
   body {
-    background-color: var(--color-onyx);
-    color: #FAFAFA;
-    font-family: var(--font-sans);
+    background-color: #0E0C0A;
+    color: #F5F0E8;
+    font-family: var(--font-instrument), system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
   }
 
   ::selection {
-    background-color: var(--color-gold);
-    color: var(--color-onyx);
+    background-color: #C5A059;
+    color: #0E0C0A;
   }
 }

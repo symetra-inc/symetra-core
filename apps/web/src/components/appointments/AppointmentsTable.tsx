@@ -22,91 +22,85 @@ interface Props {
   appointments: AppointmentRow[];
 }
 
-// ── Config ────────────────────────────────────────────────────────────────────
-
 const STATUS_ORDER: Record<AppStatus, number> = {
-  PAID: 0,
-  PENDING: 1,
-  COMPLETED: 2,
-  CANCELLED: 3,
+  PAID: 0, PENDING: 1, COMPLETED: 2, CANCELLED: 3,
 };
 
-const STATUS_CONFIG: Record<AppStatus, { label: string; className: string }> = {
+const STATUS_CONFIG: Record<AppStatus, { label: string; bg: string; text: string; border: string }> = {
   PAID: {
     label: "PAGO",
-    className:
-      "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
+    bg:     "rgba(197,160,89,0.12)",
+    text:   "#C5A059",
+    border: "rgba(197,160,89,0.20)",
   },
   PENDING: {
     label: "PENDENTE",
-    className: "bg-amber-500/10 text-amber-400 border border-amber-500/20",
+    bg:     "rgba(156,142,130,0.10)",
+    text:   "#9C8E82",
+    border: "rgba(156,142,130,0.18)",
   },
   COMPLETED: {
     label: "CONCLUÍDO",
-    className: "bg-blue-500/10 text-blue-400 border border-blue-500/20",
+    bg:     "rgba(52,120,80,0.08)",
+    text:   "#2D6A4F",
+    border: "rgba(52,120,80,0.15)",
   },
   CANCELLED: {
     label: "CANCELADO",
-    className: "bg-red-500/10 text-red-400 border border-red-500/20",
+    bg:     "rgba(180,83,9,0.06)",
+    text:   "#92400E",
+    border: "rgba(180,83,9,0.12)",
   },
 };
 
 function StatusChip({ status }: { status: AppStatus }) {
-  const { label, className } = STATUS_CONFIG[status];
+  const cfg = STATUS_CONFIG[status];
   return (
     <span
-      className={`inline-flex items-center px-2 py-0.5 text-xs font-mono font-medium rounded-md ${className}`}
+      style={{ backgroundColor: cfg.bg, color: cfg.text, borderColor: cfg.border }}
+      className="inline-flex items-center px-2.5 py-[3px] text-[8px] font-data tracking-[0.08em] uppercase border rounded-full"
     >
-      {label}
+      {cfg.label}
     </span>
   );
 }
 
-// ── Component ─────────────────────────────────────────────────────────────────
-
 export function AppointmentsTable({ appointments }: Props) {
   const [search, setSearch] = useState("");
-  const [dateFilter, setDateFilter] = useState(""); // ISO yyyy-mm-dd
+  const [dateFilter, setDateFilter] = useState("");
   const [selected, setSelected] = useState<AppointmentRow | null>(null);
 
   const filtered = useMemo(() => {
     let list = [...appointments];
-
-    // Filter: patient name search
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter((a) => a.patient.name.toLowerCase().includes(q));
     }
-
-    // Filter: exact date (scheduledAt)
     if (dateFilter) {
       list = list.filter(
         (a) => a.scheduledAt.toISOString().split("T")[0] === dateFilter
       );
     }
-
-    // Sort: PAID → PENDING → COMPLETED → CANCELLED, then by createdAt desc within group
     list.sort((a, b) => {
       const diff = STATUS_ORDER[a.status] - STATUS_ORDER[b.status];
       if (diff !== 0) return diff;
       return b.createdAt.getTime() - a.createdAt.getTime();
     });
-
     return list;
   }, [appointments, search, dateFilter]);
 
   return (
     <>
-      {/* Filters */}
+      {/* Filtros */}
       <div className="flex flex-col sm:flex-row gap-3 mb-4">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-600" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-ash/50" />
           <input
             type="text"
-            placeholder="Buscar por paciente..."
+            placeholder="Buscar paciente..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl pl-9 pr-4 py-2 text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-white/20 transition-colors"
+            className="w-full bg-ink2 border-[0.5px] border-[rgba(156,142,130,0.18)] rounded-[3px] pl-9 pr-4 py-2 font-ui text-[13px] text-linen placeholder:text-ash/50 focus:outline-none focus:border-gold transition-colors"
           />
         </div>
         <div className="relative">
@@ -114,12 +108,12 @@ export function AppointmentsTable({ appointments }: Props) {
             type="date"
             value={dateFilter}
             onChange={(e) => setDateFilter(e.target.value)}
-            className="bg-white/[0.03] border border-white/[0.08] rounded-xl px-4 py-2 text-sm text-zinc-400 focus:outline-none focus:border-white/20 transition-colors [color-scheme:dark]"
+            className="bg-ink2 border-[0.5px] border-[rgba(156,142,130,0.18)] rounded-[3px] px-4 py-2 font-data text-[12px] text-ash focus:outline-none focus:border-gold transition-colors [color-scheme:dark]"
           />
           {dateFilter && (
             <button
               onClick={() => setDateFilter("")}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-zinc-300 text-xs"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ash hover:text-linen text-xs transition-colors"
             >
               ✕
             </button>
@@ -127,60 +121,55 @@ export function AppointmentsTable({ appointments }: Props) {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
+      {/* Tabela */}
+      <div className="bg-ink2 border-[0.5px] border-[rgba(156,142,130,0.18)] rounded-[12px] overflow-hidden">
         {filtered.length === 0 ? (
-          <div className="px-6 py-16 text-center text-zinc-600 text-sm">
-            Nenhum agendamento encontrado.
+          <div className="px-6 py-14 text-center">
+            <p className="font-data text-[10px] text-ash tracking-[0.1em] uppercase">
+              Nenhum agendamento encontrado
+            </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-white/[0.06]">
-                  {["Paciente", "Procedimento", "Data/Hora", "Status", "Ação"].map(
-                    (col) => (
-                      <th
-                        key={col}
-                        className="text-left px-6 py-3 text-xs font-medium text-zinc-600 uppercase tracking-wider whitespace-nowrap"
-                      >
-                        {col}
-                      </th>
-                    )
-                  )}
+                <tr className="border-b border-[rgba(156,142,130,0.12)]">
+                  {["Paciente", "Procedimento", "Data / Hora", "Status", ""].map((col) => (
+                    <th
+                      key={col}
+                      className="text-left px-5 py-3 font-data text-[9px] text-ash tracking-[0.15em] uppercase whitespace-nowrap"
+                    >
+                      {col}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((appt, i) => (
+                {filtered.map((appt) => (
                   <tr
                     key={appt.id}
-                    className={`border-b border-white/[0.04] last:border-0 hover:bg-white/[0.02] transition-colors ${
-                      i % 2 !== 0 ? "bg-white/[0.01]" : ""
-                    }`}
+                    className="border-b border-[rgba(156,142,130,0.07)] last:border-0 hover:bg-[rgba(156,142,130,0.04)] transition-colors"
                   >
-                    <td className="px-6 py-4 text-white font-medium tracking-tight whitespace-nowrap">
+                    <td className="px-5 py-3.5 font-ui text-[13px] font-medium text-linen whitespace-nowrap">
                       {appt.patient.name}
                     </td>
-                    <td className="px-6 py-4 text-zinc-400 text-xs max-w-[180px] truncate">
+                    <td className="px-5 py-3.5 font-ui text-[12px] text-ash max-w-[180px] truncate">
                       {appt.procedureName}
                     </td>
-                    <td className="px-6 py-4 font-mono text-xs text-zinc-500 whitespace-nowrap">
+                    <td className="px-5 py-3.5 font-data text-[11px] text-ash whitespace-nowrap">
                       {appt.scheduledAt.toLocaleDateString("pt-BR")}
                       {" · "}
-                      {appt.scheduledAt.toLocaleTimeString("pt-BR", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                      {appt.scheduledAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-5 py-3.5">
                       <StatusChip status={appt.status} />
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-5 py-3.5">
                       <button
                         onClick={() => setSelected(appt)}
-                        className="text-xs text-zinc-600 hover:text-white border border-white/[0.06] hover:border-white/20 rounded-xl px-3 py-1 transition-all duration-200"
+                        className="font-ui text-[11px] text-ash hover:text-linen border border-[rgba(156,142,130,0.18)] hover:border-[rgba(156,142,130,0.4)] rounded-[3px] px-3 py-1 transition-all duration-200"
                       >
-                        Ver detalhes
+                        Ver
                       </button>
                     </td>
                   </tr>
@@ -191,11 +180,7 @@ export function AppointmentsTable({ appointments }: Props) {
         )}
       </div>
 
-      {/* Detail panel */}
-      <AppointmentDetail
-        appointment={selected}
-        onClose={() => setSelected(null)}
-      />
+      <AppointmentDetail appointment={selected} onClose={() => setSelected(null)} />
     </>
   );
 }

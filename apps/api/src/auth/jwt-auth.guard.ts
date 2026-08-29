@@ -11,6 +11,7 @@ export interface JwtUser {
   id: string;
   role: string;
   clinicId: string | null;
+  agencyId: string | null;
 }
 
 @Injectable()
@@ -35,6 +36,7 @@ export class JwtAuthGuard implements CanActivate {
         id: payload['id'] as string,
         role: payload['role'] as string,
         clinicId: (payload['clinicId'] as string | null) ?? null,
+        agencyId: (payload['agencyId'] as string | null) ?? null,
       };
 
       return true;

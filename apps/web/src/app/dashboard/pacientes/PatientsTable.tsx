@@ -5,31 +5,40 @@ import type { PatientResponse } from "@/lib/api";
 
 type AppStatus = "PENDING" | "PAID" | "COMPLETED" | "CANCELLED";
 
-const STATUS_CONFIG: Record<AppStatus, { label: string; className: string }> = {
+const STATUS_CONFIG: Record<AppStatus, { label: string; bg: string; text: string; border: string }> = {
   PAID: {
     label: "PAGO",
-    className: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
+    bg:     "rgba(197,160,89,0.12)",
+    text:   "#C5A059",
+    border: "rgba(197,160,89,0.20)",
   },
   PENDING: {
     label: "PENDENTE",
-    className: "bg-amber-500/10 text-amber-400 border border-amber-500/20",
+    bg:     "rgba(156,142,130,0.10)",
+    text:   "#9C8E82",
+    border: "rgba(156,142,130,0.18)",
   },
   COMPLETED: {
     label: "CONCLUÍDO",
-    className: "bg-blue-500/10 text-blue-400 border border-blue-500/20",
+    bg:     "rgba(52,120,80,0.08)",
+    text:   "#2D6A4F",
+    border: "rgba(52,120,80,0.15)",
   },
   CANCELLED: {
     label: "CANCELADO",
-    className: "bg-red-500/10 text-red-400 border border-red-500/20",
+    bg:     "rgba(180,83,9,0.06)",
+    text:   "#92400E",
+    border: "rgba(180,83,9,0.12)",
   },
 };
 
-function StatusBadge({ status }: { status: string }) {
+function StatusChip({ status }: { status: string }) {
   const cfg = STATUS_CONFIG[status as AppStatus];
-  if (!cfg) return <span className="text-xs text-zinc-600">—</span>;
+  if (!cfg) return <span className="font-data text-[9px] text-ash">—</span>;
   return (
     <span
-      className={`inline-flex items-center px-2 py-0.5 text-xs font-mono font-medium rounded-md ${cfg.className}`}
+      style={{ backgroundColor: cfg.bg, color: cfg.text, borderColor: cfg.border }}
+      className="inline-flex items-center px-2.5 py-[3px] text-[8px] font-data tracking-[0.08em] uppercase border rounded-full"
     >
       {cfg.label}
     </span>
@@ -41,22 +50,24 @@ export function PatientsTable({ patients }: { patients: PatientResponse[] }) {
 
   if (patients.length === 0) {
     return (
-      <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] px-6 py-16 text-center text-zinc-600 text-sm">
-        Nenhum paciente encontrado.
+      <div className="bg-ink2 border-[0.5px] border-[rgba(156,142,130,0.18)] rounded-[12px] px-6 py-14 text-center">
+        <p className="font-data text-[10px] text-ash tracking-[0.1em] uppercase">
+          Nenhum paciente encontrado
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
+    <div className="bg-ink2 border-[0.5px] border-[rgba(156,142,130,0.18)] rounded-[12px] overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-white/[0.06]">
-              {["Nome", "WhatsApp", "Último agendamento", "Status"].map((col) => (
+            <tr className="border-b border-[rgba(156,142,130,0.12)]">
+              {["Paciente", "WhatsApp", "Último agendamento", "Status"].map((col) => (
                 <th
                   key={col}
-                  className="text-left px-6 py-3 text-xs font-medium text-zinc-600 uppercase tracking-wider whitespace-nowrap"
+                  className="text-left px-5 py-3 font-data text-[9px] text-ash tracking-[0.15em] uppercase whitespace-nowrap"
                 >
                   {col}
                 </th>
@@ -64,38 +75,39 @@ export function PatientsTable({ patients }: { patients: PatientResponse[] }) {
             </tr>
           </thead>
           <tbody>
-            {patients.map((p, i) => {
+            {patients.map((p) => {
               const appt = p.appointments[0] ?? null;
               return (
                 <tr
                   key={p.id}
                   onClick={() => router.push(`/dashboard/chat?patientId=${p.id}`)}
-                  className={`border-b border-white/[0.04] last:border-0 cursor-pointer hover:bg-white/[0.04] transition-colors ${
-                    i % 2 !== 0 ? "bg-white/[0.01]" : ""
-                  }`}
+                  className="border-b border-[rgba(156,142,130,0.07)] last:border-0 cursor-pointer hover:bg-[rgba(156,142,130,0.04)] transition-colors"
                 >
-                  <td className="px-6 py-4 text-white font-medium whitespace-nowrap">
+                  <td className="px-5 py-3.5 font-ui text-[13px] font-medium text-linen whitespace-nowrap">
                     {p.name}
                   </td>
-                  <td className="px-6 py-4 font-mono text-xs text-zinc-500 whitespace-nowrap">
+                  <td className="px-5 py-3.5 font-data text-[11px] text-ash whitespace-nowrap">
                     {p.whatsappPhone}
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-5 py-3.5">
                     {appt ? (
                       <div>
-                        <p className="text-xs text-zinc-300 truncate max-w-[200px]">
+                        <p className="font-ui text-[12px] text-linen/80 truncate max-w-[200px]">
                           {appt.procedureName}
                         </p>
-                        <p className="text-[11px] text-zinc-600 font-mono mt-0.5">
+                        <p className="font-data text-[10px] text-ash mt-0.5">
                           {new Date(appt.scheduledAt).toLocaleDateString("pt-BR")}
                         </p>
                       </div>
                     ) : (
-                      <span className="text-xs text-zinc-600">—</span>
+                      <span className="font-data text-[10px] text-ash">—</span>
                     )}
                   </td>
-                  <td className="px-6 py-4">
-                    {appt ? <StatusBadge status={appt.status} /> : <span className="text-xs text-zinc-600">—</span>}
+                  <td className="px-5 py-3.5">
+                    {appt
+                      ? <StatusChip status={appt.status} />
+                      : <span className="font-data text-[10px] text-ash">—</span>
+                    }
                   </td>
                 </tr>
               );

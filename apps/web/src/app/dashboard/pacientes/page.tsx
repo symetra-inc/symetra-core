@@ -1,4 +1,3 @@
-import { Users } from "lucide-react";
 import { auth } from "@/auth";
 import { getPatients } from "@/lib/api";
 import { PatientsTable } from "./PatientsTable";
@@ -9,7 +8,6 @@ export default async function PacientesPage() {
 
   const patients = clinicId ? await getPatients(clinicId) : [];
 
-  // Ordena por data do último agendamento (mais recente primeiro)
   const sorted = [...patients].sort((a, b) => {
     const dateA = a.appointments[0]?.scheduledAt ?? a.createdAt;
     const dateB = b.appointments[0]?.scheduledAt ?? b.createdAt;
@@ -17,16 +15,20 @@ export default async function PacientesPage() {
   });
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Users className="w-5 h-5 text-zinc-400" />
-          <div>
-            <h2 className="text-lg font-semibold text-white">Pacientes</h2>
-            <p className="text-xs text-zinc-500">Lista de pacientes cadastrados</p>
+    <div className="max-w-[1160px] mx-auto space-y-8">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2.5 mb-2">
+            <div className="w-[28px] h-[0.5px] bg-[rgba(197,160,89,0.5)]" />
+            <span className="font-data text-[9px] text-[rgba(197,160,89,0.65)] tracking-[0.2em] uppercase">
+              Pacientes
+            </span>
           </div>
+          <h1 className="font-display font-bold text-linen text-[2rem] tracking-[-0.025em] leading-none">
+            Base de Pacientes
+          </h1>
         </div>
-        <span className="text-xs font-mono text-zinc-500 border border-white/[0.06] rounded-xl px-3 py-1">
+        <span className="font-data text-[10px] text-ash border border-[rgba(156,142,130,0.18)] rounded-full px-3 py-1 self-start mt-1">
           {sorted.length} registros
         </span>
       </div>

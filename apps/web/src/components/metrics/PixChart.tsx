@@ -1,17 +1,9 @@
 "use client";
 
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  Cell,
-} from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 
 interface PixData {
-  date: string; // ISO yyyy-mm-dd
+  date: string;
   count: number;
 }
 
@@ -40,41 +32,43 @@ export function PixChart({ data }: { data: PixData[] }) {
   const max = Math.max(...chartData.map((d) => d.count), 1);
 
   return (
-    <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6">
+    <div className="bg-ink2 border-[0.5px] border-[rgba(156,142,130,0.18)] rounded-[12px] p-5 h-full">
       <div className="mb-5">
-        <h3 className="text-sm font-semibold text-white">Pix confirmados</h3>
-        <p className="text-xs text-zinc-500 mt-0.5">Últimos 7 dias</p>
+        <div className="flex items-center gap-2.5 mb-1.5">
+          <div className="w-[22px] h-[0.5px] bg-[rgba(197,160,89,0.5)]" />
+          <span className="font-data text-[9px] text-[rgba(197,160,89,0.65)] tracking-[0.2em] uppercase">
+            Pix Confirmados
+          </span>
+        </div>
+        <p className="font-ui text-[11px] text-ash">Últimos 7 dias</p>
       </div>
-      <ResponsiveContainer width="100%" height={140}>
-        <BarChart data={chartData} barSize={26} barCategoryGap="30%">
+      <ResponsiveContainer width="100%" height={130}>
+        <BarChart data={chartData} barSize={22} barCategoryGap="35%">
           <XAxis
             dataKey="label"
             axisLine={false}
             tickLine={false}
-            tick={{ fill: "#71717a", fontSize: 11, fontFamily: "monospace" }}
+            tick={{ fill: "#9C8E82", fontSize: 10, fontFamily: "var(--font-jetbrains, monospace)" }}
           />
           <YAxis hide domain={[0, max + 1]} allowDecimals={false} />
           <Tooltip
-            cursor={{ fill: "rgba(255,255,255,0.03)" }}
+            cursor={{ fill: "rgba(197,160,89,0.04)" }}
             contentStyle={{
-              background: "#09090b",
-              border: "1px solid rgba(255,255,255,0.08)",
-              borderRadius: 10,
-              fontSize: 12,
-              color: "#fff",
+              background: "#1A1714",
+              border: "0.5px solid rgba(156,142,130,0.18)",
+              borderRadius: 6,
+              fontSize: 11,
+              color: "#F5F0E8",
+              fontFamily: "var(--font-jetbrains, monospace)",
             }}
             formatter={(v) => [v ?? 0, "confirmados"]}
-            labelStyle={{ color: "#71717a", marginBottom: 2 }}
+            labelStyle={{ color: "#9C8E82", marginBottom: 2 }}
           />
-          <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+          <Bar dataKey="count" radius={[3, 3, 0, 0]}>
             {chartData.map((entry, i) => (
               <Cell
                 key={i}
-                fill={
-                  entry.count > 0
-                    ? "rgb(16,185,129)"
-                    : "rgba(255,255,255,0.05)"
-                }
+                fill={entry.count > 0 ? "#C5A059" : "rgba(156,142,130,0.10)"}
               />
             ))}
           </Bar>

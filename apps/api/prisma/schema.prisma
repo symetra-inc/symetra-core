@@ -17,6 +17,12 @@ enum PersonaType {
   ESPECIALISTA
 }
 
+enum ClinicTier {
+  STARTER
+  GROWTH
+  SCALE
+}
+
 enum AppointmentStatus {
   PENDING    // A aguardar Pix (Bloqueio de 15 min)
   PAID       // Pix Confirmado (Handoff autorizado)
@@ -79,6 +85,10 @@ model Clinic {
 
   receptionistPhone String? // WhatsApp da secretária para notificações de handoff
   receptionistName  String? // Para personalizar a notificação
+
+  // Billing
+  currentTier       ClinicTier @default(STARTER)
+  contractStartDate DateTime   @default(now())
 
   // O Cérebro da IA
   persona          PersonaType @default(SOFISTICADA)
@@ -153,6 +163,7 @@ model Appointment {
 
   status             AppointmentStatus @default(PENDING)
   procedureName      String
+  durationMinutes    Int       @default(60) // Duração do procedimento em minutos
   scheduledAt        DateTime  // Data no Google Calendar
   lockedUntil        DateTime? // A trava de 15 minutos do Pix
 

@@ -33,13 +33,13 @@ const roleStyle: Record<
     bubble: "bg-white/[0.06] text-zinc-200",
   },
   AI: {
-    label: "Serena IA",
+    label: "Serena",
     align: "items-end",
     bubble:
       "bg-emerald-500/10 text-emerald-200 border border-emerald-500/15",
   },
   HUMAN: {
-    label: "Secretária",
+    label: "Recepcionista",
     align: "items-end",
     bubble: "bg-blue-500/10 text-blue-200 border border-blue-500/15",
   },

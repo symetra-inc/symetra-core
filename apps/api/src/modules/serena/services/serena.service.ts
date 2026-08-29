@@ -1,11 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import OpenAI from 'openai';
 import { format } from 'date-fns';
-import { Clinic, PersonaType } from '@prisma/client';
+import { Clinic, ClinicTier, PersonaType } from '@prisma/client';
 import { CalendarService } from '../../calendar/calendar.service';
 import { AsaasService } from '../../asaas/asaas.service';
 import { PrismaService } from '../../../infrastructure/database/prisma.service';
 import { CryptoService } from '../../../infrastructure/crypto/crypto.service';
+import { normalizeCpf } from '../../../common/utils/cpf.util';
 
 export interface PatientContext {
   id: string;
@@ -26,6 +27,63 @@ export interface SerenaAction {
     date_to: string;   // ISO 8601
   };
 }
+
+// ── Helpers de formatação ──────────────────────────────────────────────────────
+
+function formatDuration(minutes: number): string {
+  if (minutes < 60) return `${minutes} minutos`;
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return m === 0 ? `${h}h` : `${h}h${m}`;
+}
+
+function formatKnowledgeBaseForPrompt(raw: string): string {
+  try {
+    const kb = JSON.parse(raw);
+    if (typeof kb === 'object' && kb !== null) {
+      const lines: string[] = [];
+      if (kb.endereco) lines.push(`- Endereço: ${kb.endereco}`);
+      if (kb.horarioFuncionamento) lines.push(`- Horário de funcionamento: ${kb.horarioFuncionamento}`);
+      if (kb.bioMedico) lines.push(`- Médico responsável: ${kb.bioMedico}`);
+      if (kb.diferenciaisClinica) lines.push(`- Diferenciais da clínica: ${kb.diferenciaisClinica}`);
+      if (kb.diferenciaisProcedimentos) lines.push(`- Características dos procedimentos: ${kb.diferenciaisProcedimentos}`);
+      if (kb.informacoesAdicionais) lines.push(`- Informações adicionais: ${kb.informacoesAdicionais}`);
+      return lines.length > 0 ? lines.join('\n') : raw;
+    }
+  } catch {
+    // fallback to raw string
+  }
+  return raw;
+}
+
+function formatCatalogForPrompt(catalog: unknown): string {
+  try {
+    const items: any[] = Array.isArray(catalog)
+      ? catalog
+      : JSON.parse(catalog as string);
+
+    const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+    return items
+      .map((item: any) => {
+        const precoFormatado = brl.format(Number(item.preco));
+        const preco =
+          item.precoTipo === 'a_partir'
+            ? `A partir de ${precoFormatado}`
+            : `${precoFormatado} (fixo)`;
+        const duration = item.durationMinutes
+          ? ` — duração: ${formatDuration(item.durationMinutes)}`
+          : '';
+        return `- ${item.procedimento}: ${preco}${duration}`;
+      })
+      .join('\n');
+  } catch {
+    return typeof catalog === 'string'
+      ? catalog
+      : JSON.stringify(catalog, null, 2);
+  }
+}
+
+// ── Service ───────────────────────────────────────────────────────────────────
 
 @Injectable()
 export class SerenaService {
@@ -52,22 +110,44 @@ export class SerenaService {
 
     const hoje = format(new Date(), 'dd/MM/yyyy HH:mm');
 
-    // 1. MAPEAMENTO DINÂMICO DE PERSONAS
-    const personaInstructions = {
-      [PersonaType.ARISTOCRATA]: 'Tom: Aristocrático, distante, elegante e inflexível. Use vocabulário refinado. Não use emojis exagerados. Foque em exclusividade.',
-      [PersonaType.SOFISTICADA]: 'Tom: Sofisticada, calorosa, mas impecável. Use o primeiro nome, seja ágil e acolhedora. Use emojis elegantes (✨, 💎).',
-      [PersonaType.ESPECIALISTA]: 'Tom: Especialista, direta, técnica e autoritária. Foque na segurança, nos produtos originais e na autoridade médica.',
+    // BUG 3 FIX — Personas expandidas com instruções comportamentais distintas
+    const personaInstructions: Record<PersonaType, string> = {
+      [PersonaType.ARISTOCRATA]: `Tom aristocrático, distante e inflexível.
+Use vocabulário refinado e formal. Frases curtas, precisas, impecáveis.
+Zero gírias. Sem emojis. Sem excessos de gentileza.
+Transmita exclusividade e distanciamento controlado — você representa a elite da medicina estética.
+Exemplo de tom: "Nosso portfólio é criterioso. O procedimento mais adequado ao seu perfil seria X. Posso verificar disponibilidade."`,
+      [PersonaType.SOFISTICADA]: `Tom sofisticado, caloroso e impecável.
+Use o nome do paciente com frequência. Seja ágil, acolhedora e próxima — faça o paciente sentir que é especial.
+Emojis com moderação: no máximo 1 por mensagem (✨ ou 🤍 preferidos).
+Exemplo de tom: "Que ótimo, [nome]! Tenho o horário perfeito para você. Vamos garantir sua vaga? ✨"`,
+      [PersonaType.ESPECIALISTA]: `Tom técnico, direto e autoritário.
+Foco em segurança, protocolos originais e autoridade médica. Respostas curtas e objetivas.
+Dados, procedimentos, próximos passos. Zero floreios. Sem emojis.
+Exemplo de tom: "O protocolo indicado para esse caso é X. Posso verificar disponibilidade agora."`,
     };
 
     const currentPersona = personaInstructions[clinic.persona] ?? personaInstructions[PersonaType.SOFISTICADA];
 
-    // 2. FORMATAÇÃO DO CATÁLOGO
-    const catalogString =
-      typeof clinic.catalog === 'string'
-        ? clinic.catalog
-        : JSON.stringify(clinic.catalog, null, 2);
+    const noAvailabilityMsg: Record<PersonaType, string> = {
+      [PersonaType.SOFISTICADA]: `"No momento não temos horários disponíveis para essa data. Posso verificar outra data para você?"`,
+      [PersonaType.ARISTOCRATA]: `"Infelizmente não há vagas disponíveis para a data solicitada. Permita-me verificar alternativas."`,
+      [PersonaType.ESPECIALISTA]: `"Essa data está sem horários livres! Mas me fala outra opção que verifico pra você 😊"`,
+    };
+    const currentNoAvailabilityMsg = noAvailabilityMsg[clinic.persona] ?? noAvailabilityMsg[PersonaType.SOFISTICADA];
 
-    // 3. PROMPT MESTRE
+    // BUG 3 FIX — log de visibilidade da persona ativa (somente em dev)
+    if (process.env.NODE_ENV !== 'production') {
+      this.logger.debug(`[Serena] Persona ativa: ${clinic.persona}`);
+    }
+
+    // 2. FORMATAÇÃO DO CATÁLOGO (com duração e tipo de preço)
+    const catalogString = formatCatalogForPrompt(clinic.catalog);
+
+    // 3. FORMATAÇÃO DA BASE DE CONHECIMENTO (estruturada)
+    const knowledgeBaseString = formatKnowledgeBaseForPrompt(clinic.knowledgeBase);
+
+    // 4. PROMPT MESTRE
   const systemPrompt: OpenAI.Chat.ChatCompletionSystemMessageParam = {
     role: 'system',
     content: `# Contexto
@@ -75,21 +155,24 @@ export class SerenaService {
   Especialista responsável: ${clinic.doctorName}.
   Data e hora atual: ${hoje}.
 
+  ## PERSONA ATIVA: ${clinic.persona}
+  ${currentPersona}
+
   ## 1. Comportamento e Formato (WhatsApp — Regras Absolutas)
   - **Brevidade:** Máximo 2 frases por mensagem. Você está no WhatsApp, não escrevendo e-mail.
-  - **Tom:** ${currentPersona}
   - **Idioma:** Português do Brasil estrito. Proibido: "equipa", "utilizador", "fique descansada", "efectuar", "estou a fazer". Use: "equipe", "fique tranquila", "estou fazendo".
-  - **Emojis:** Máximo 1 por mensagem.
+  - **Emojis:** Máximo 1 por mensagem, conforme orientação da persona acima.
   - **Gênero neutro:** Evite palavras com gênero. Use "Pode ficar tranquila(o)" → prefira "Não precisa se preocupar".
-  - **Identidade:** Você NÃO é IA. É a Concierge Exclusiva da clínica. Se questionada, confirme isso.
+  - **Identidade:** Você é a Serena, assistente da ${clinic.name}. Nunca diga que é uma inteligência artificial, sistema automatizado ou robô. Se perguntada diretamente se é uma IA ou robô, responda (adaptando ao tom da sua persona): "Sou a assistente da clínica, aqui para te ajudar com agendamentos! 😊"
   - **Variação:** Nunca repita a mesma frase de abertura, transição ou fechamento duas vezes na conversa.
   - **Sem anúncios de ação:** NUNCA envie mensagens como "Um momento", "Vou verificar", "Vou gerar" antes de chamar uma tool. Execute a tool e responda diretamente com o resultado.
+  - **Vocabulário proibido (BUG 2 FIX):** NUNCA use as palavras "reiniciar", "recomeçar", "começar do zero" ou equivalentes. Se perder o contexto da conversa, retome com: "Claro! Para te ajudar melhor, pode me dizer qual procedimento você tem interesse?"
 
   ## 2. Regras de Negócio (Inegociáveis)
   - Preço inegociável. Zero descontos.
   - Taxa de reserva: R$ ${clinic.reservationFee.toFixed(2)} via Pix (abatida no procedimento).
-  - Procedimentos autorizados:
-  ${catalogString}
+  - Procedimentos disponíveis:
+${catalogString}
   - Fora da lista: negar educadamente e oferecer o portfólio acima.
 
   ## 3. Fluxo de Atendimento (Máquina de Estados)
@@ -99,9 +182,17 @@ export class SerenaService {
   - Descubra o nome com naturalidade. Se já souber, não pergunte.
   - Entenda o objetivo. Explique valor e diferenciais antes de falar em datas ou pagamento.
 
+  **ORDEM DE COLETA DE DADOS (nunca alterar esta sequência):**
+  1. Procedimento de interesse
+  2. Data e horário preferidos (após confirmar disponibilidade via tool)
+  3. Nome completo do paciente
+  4. CPF (somente após o nome — nunca perguntar CPF antes do nome)
+  Não coletar mais de um dado por mensagem.
+
   **ESTADO 2 — Agenda**
   - Só avance quando houver intenção real de agendar.
-  - OBRIGATÓRIO: chamar consultar_disponibilidade_agenda antes de confirmar qualquer data.
+  - OBRIGATÓRIO: confirmar o procedimento desejado ANTES de consultar disponibilidade, pois a duração varia.
+  - OBRIGATÓRIO: chamar consultar_disponibilidade_agenda antes de confirmar qualquer data, passando o durationMinutes do procedimento escolhido.
   - NUNCA invente horários.
 
   **ESTADO 3 — Fechamento**
@@ -113,14 +204,28 @@ export class SerenaService {
 
   CPF: assim que o paciente enviar qualquer sequência numérica que pareça CPF, chame a tool imediatamente. Não valide por conta própria.
 
+  **FLUXO DE CONFIRMAÇÃO DE AGENDAMENTO (CRÍTICO — BUG 1 FIX):**
+  Quando todos os 4 pontos acima estiverem confirmados (especialmente após o paciente enviar o CPF):
+  1. Chame IMEDIATAMENTE a tool gerar_pix_e_travar_agenda — sem enviar nenhuma mensagem antes.
+  2. Após a tool retornar com sucesso, confirme: "Agendei [procedimento] para [data] às [hora] (duração estimada: [X] min). Segue o código Pix:"
+  3. NUNCA diga "vou agendar", "vou gerar seu Pix", "um momento" antes de chamar a tool. O agendamento só existe após a tool retornar com sucesso.
+  4. O paciente NÃO precisa enviar mais nenhuma mensagem após o CPF — você age imediatamente.
+
+  **ENCERRAMENTO APÓS PAGAMENTO:**
+  Quando o Pix for gerado e o paciente confirmar o agendamento, sua função está concluída.
+  Envie a mensagem de confirmação e encerre cordialmente a conversa.
+  Não ofereça continuar ajudando, não pergunte se há mais dúvidas.
+  A recepcionista entrará em contato para os próximos passos.
+  Se o paciente mandar qualquer mensagem após o Pix ser gerado: responda apenas
+  "Nossa recepcionista entrará em contato em breve. 😊" — sem retomar o fluxo de agendamento.
+
   ## 4. Mudança de Data ou Procedimento Após Pix Gerado (CRÍTICO)
   Se o paciente quiser trocar data ou procedimento depois de um Pix já gerado:
   - A chave anterior está CANCELADA pelo sistema automaticamente.
-  - Você DEVE reiniciar pelo ESTADO 2: consultar nova disponibilidade via tool consultar_disponibilidade_agenda e chamar gerar_pix_e_travar_agenda novamente.
+  - Você DEVE voltar ao ESTADO 2: consultar nova disponibilidade via tool consultar_disponibilidade_agenda e chamar gerar_pix_e_travar_agenda novamente.
   - NUNCA diga que vai "ajustar" ou "atualizar" a chave anterior. Ela não existe mais.
-  - NUNCA diga "precisamos reinciar", "vou recomeçar o processo" ou qualquer variação.
   - NUNCA reaproveite ou mencione o código Pix antigo.
-  - Fale apenas o resultado. Diga que não tem problema e que você irá ver os horários disponíveis. Em seguida liste os slots. 
+  - Fale apenas o resultado. Diga que não tem problema e que você irá ver os horários disponíveis. Em seguida liste os slots.
 
   ## 5. Casos Especiais
 
@@ -136,8 +241,25 @@ export class SerenaService {
   |||<codigo_pix>|||
   NUNCA coloque o código dentro de frases.
 
-  ## 7. Base de Conhecimento da Clínica
-  ${clinic.knowledgeBase}`,
+  ## 7. Regras de Agendamento
+  - Cada procedimento tem uma duração específica listada na seção 2.
+  - Ao propor um horário, você NUNCA deve sugerir um slot onde (horário proposto + duração do procedimento) sobreponha outro agendamento existente.
+  - Sempre confirme com o paciente o procedimento desejado ANTES de consultar disponibilidade, pois a duração varia por procedimento.
+  - Ao confirmar o agendamento, mencione a duração estimada: "Sua consulta de [procedimento] tem duração de aproximadamente [duração]."
+
+  ## 8. Base de Conhecimento da Clínica
+  INFORMAÇÕES DA CLÍNICA:
+${knowledgeBaseString}
+
+  ## 9. Mensagens de Erro e Indisponibilidade
+  Sempre mantenha o tom da persona ativa ao comunicar limitações. Nunca use frases genéricas como "Ocorreu um erro" ou "Não foi possível".
+  Quando não houver horários disponíveis, use exatamente: ${currentNoAvailabilityMsg}
+  Para qualquer outra limitação técnica, comunique com naturalidade no tom da sua persona, sem expor detalhes técnicos.
+
+  ## 10. Recuperação de Contexto
+  Se a conversa estiver com contexto incompleto ou ambíguo, retome com naturalidade:
+  "Claro! Para te ajudar melhor, pode me dizer qual procedimento você tem interesse?"
+  Nunca diga "vou reiniciar", "vou recomeçar" ou equivalentes.`,
   };
 
 
@@ -154,8 +276,9 @@ export class SerenaService {
               patient_cpf: { type: 'string', description: 'CPF do paciente informado por ele, no formato enviado (ex: 123.456.789-00 ou 12345678900)' },
               procedure: { type: 'string', description: 'Nome exato do procedimento escolhido' },
               target_date: { type: 'string', description: 'Data e hora escolhida no formato ISO 8601 (ex: 2024-05-20T14:30:00Z)' },
+              durationMinutes: { type: 'number', description: 'Duração do procedimento em minutos, conforme o catálogo da clínica' },
             },
-            required: ['patient_name', 'patient_cpf', 'procedure', 'target_date'],
+            required: ['patient_name', 'patient_cpf', 'procedure', 'target_date', 'durationMinutes'],
           },
         },
       },
@@ -170,14 +293,15 @@ export class SerenaService {
         type: 'function',
         function: {
           name: 'consultar_disponibilidade_agenda',
-          description: 'Consulta os horários disponíveis na agenda da clínica. Use ANTES de confirmar qualquer data com o paciente e ANTES de chamar gerar_pix_e_travar_agenda.',
+          description: 'Consulta os horários disponíveis na agenda da clínica. Use ANTES de confirmar qualquer data com o paciente e ANTES de chamar gerar_pix_e_travar_agenda. Confirme o procedimento desejado antes de chamar, pois durationMinutes é obrigatório.',
           parameters: {
             type: 'object',
             properties: {
               date_from: { type: 'string', description: 'Data e hora de início do intervalo de busca no formato ISO 8601' },
               date_to: { type: 'string', description: 'Data e hora de fim do intervalo de busca no formato ISO 8601' },
+              durationMinutes: { type: 'number', description: 'Duração do procedimento em minutos, conforme o catálogo da clínica. Obrigatório para calcular colisões corretamente.' },
             },
-            required: ['date_from', 'date_to'],
+            required: ['date_from', 'date_to', 'durationMinutes'],
           },
         },
       },
@@ -194,7 +318,7 @@ export class SerenaService {
 
       const responseMessage = completion.choices[0].message;
 
-      // 4. INTERCEPTADOR DE FERRAMENTAS
+      // 5. INTERCEPTADOR DE FERRAMENTAS
       if (responseMessage.tool_calls && responseMessage.tool_calls.length > 0) {
         const toolCall = responseMessage.tool_calls[0];
 
@@ -220,7 +344,7 @@ export class SerenaService {
 
           // ── PIX + TRAVA ───────────────────────────────────────────────────────
           if (toolCall.function.name === 'gerar_pix_e_travar_agenda') {
-            let pixArgs: { patient_name: string; patient_cpf: string; procedure: string; target_date: string };
+            let pixArgs: { patient_name: string; patient_cpf: string; procedure: string; target_date: string; durationMinutes?: number };
             try {
               pixArgs = JSON.parse(toolCall.function.arguments);
             } catch {
@@ -269,7 +393,7 @@ export class SerenaService {
 
           // ── CONSULTA DE AGENDA ────────────────────────────────────────────────
           if (toolCall.function.name === 'consultar_disponibilidade_agenda') {
-            let calArgs: { date_from: string; date_to: string };
+            let calArgs: { date_from: string; date_to: string; durationMinutes?: number };
             try {
               calArgs = JSON.parse(toolCall.function.arguments);
             } catch {
@@ -277,8 +401,12 @@ export class SerenaService {
               return { type: 'reply', text: 'Não consegui interpretar o intervalo de datas. Pode informar os dias que prefere?' };
             }
 
-            this.logger.log(`[SERENA] Consultando agenda de ${calArgs.date_from} até ${calArgs.date_to}`);
-            const availableSlots = await this.calendarService.getAvailableSlots(calArgs.date_from, calArgs.date_to);
+            this.logger.log(`[SERENA] Consultando agenda de ${calArgs.date_from} até ${calArgs.date_to} (duração: ${calArgs.durationMinutes ?? 60}min)`);
+            const availableSlots = await this.calendarService.getAvailableSlots(
+              calArgs.date_from,
+              calArgs.date_to,
+              calArgs.durationMinutes ?? 60,
+            );
 
             const calendarToolResult =
               availableSlots.length > 0
@@ -311,7 +439,7 @@ export class SerenaService {
               const secondToolCall = secondResponse.tool_calls[0];
 
               if (secondToolCall.type === 'function' && secondToolCall.function.name === 'gerar_pix_e_travar_agenda') {
-                let pixArgs: { patient_name: string; patient_cpf: string; procedure: string; target_date: string };
+                let pixArgs: { patient_name: string; patient_cpf: string; procedure: string; target_date: string; durationMinutes?: number };
                 try {
                   pixArgs = JSON.parse(secondToolCall.function.arguments);
                 } catch {
@@ -368,7 +496,7 @@ export class SerenaService {
         }
       }
 
-      // 5. RESPOSTA NORMAL DE TEXTO
+      // 6. RESPOSTA NORMAL DE TEXTO
       if (responseMessage.content) {
         return { type: 'reply', text: responseMessage.content };
       }
@@ -380,12 +508,21 @@ export class SerenaService {
     }
   }
 
+  private resolveSplitValue(tier: ClinicTier): number {
+    const splits: Record<ClinicTier, number> = {
+      STARTER: 15,
+      GROWTH: 12,
+      SCALE: 0,
+    };
+    return splits[tier];
+  }
+
   /**
    * Executa a cobrança Pix via AsaasService e retorna a string de resultado
    * a ser enviada de volta à IA como conteúdo da tool call.
    */
   private async executePixCharge(
-    args: { patient_name: string; patient_cpf: string; procedure: string; target_date: string },
+    args: { patient_name: string; patient_cpf: string; procedure: string; target_date: string; durationMinutes?: number },
     clinic: Clinic,
     patientContext: PatientContext,
   ): Promise<string> {
@@ -410,6 +547,7 @@ export class SerenaService {
       this.logger.log(`[SERENA] Appointment PENDING anterior cancelado: ${existingPending.id}`);
     }
 
+      const splitValue = this.resolveSplitValue(clinic.currentTier);
       const pixResult = await this.asaasService.createPixCharge({
         clinicId: clinic.id,
         patientId: patientContext.id,
@@ -420,15 +558,19 @@ export class SerenaService {
         scheduledAt: new Date(args.target_date),
         asaasApiKey: clinic.asaasApiKey!,
         reservationFee: clinic.reservationFee,
+        durationMinutes: args.durationMinutes ?? 60,
+        symetraSplitWalletId: process.env.SYMETRA_ASAAS_WALLET_ID,
+        symetraSplitValue: splitValue,
       });
 
       this.logger.log(`[SERENA] Pix gerado — Invoice: ${pixResult.asaasInvoiceId}, Appointment: ${pixResult.appointmentId}`);
 
       // Persiste o CPF criptografado no registro do paciente (LGPD)
+      // Normalizado (só dígitos) para bater com o valor validado e enviado ao Asaas.
       if (args.patient_cpf) {
         await this.prisma.patient.update({
           where: { id: patientContext.id },
-          data: { cpfEncrypted: this.cryptoService.encrypt(args.patient_cpf) },
+          data: { cpfEncrypted: this.cryptoService.encrypt(normalizeCpf(args.patient_cpf)) },
         }).catch((err) => this.logger.error(`[SERENA] Falha ao salvar CPF criptografado: ${err.message}`));
       }
 
@@ -451,18 +593,26 @@ export class SerenaService {
          });
       }
 
-      const isCpfError =
-        /cpf|cnpj|inválido|invalid|400/i.test(err.message) ||
-        err.response?.status === 400 ||
-        err.response?.status === 401;
-        
+      // 401 = chave de API do Asaas inválida/expirada na clínica — problema de
+      // configuração, não do CPF do paciente. Não deve ser reportado como CPF inválido.
+      if (err.status === 401 || err.response?.status === 401) {
+        this.logger.error(`[SERENA] Asaas API key inválida/expirada para a clínica ${clinic.id}`);
+        return JSON.stringify({
+          error: true,
+          code: 'PIX_GENERATION_FAILED',
+          message:
+            'Não foi possível gerar o Pix neste momento por instabilidade técnica. Avise o paciente com educação e informe que a equipe já foi notificada. Não invente um código Pix e não peça o CPF novamente.',
+        });
+      }
+
+      const isCpfError = err.message === 'CPF_INVALID' || err.status === 422;
 
       if (isCpfError) {
         return JSON.stringify({
           error: true,
           code: 'INVALID_CPF',
           message:
-            'O CPF informado foi recusado pelo sistema bancário. Informe o paciente de forma natural e peça que ele digite o CPF correto novamente. Não mencione erro técnico.',
+            'O CPF informado é inválido (número de dígitos ou dígitos verificadores incorretos). Informe o paciente de forma natural e peça que ele digite o CPF correto novamente. Não mencione erro técnico.',
         });
       }
 

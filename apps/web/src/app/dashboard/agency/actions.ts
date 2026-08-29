@@ -2,11 +2,26 @@
 
 import { prisma } from "@/lib/prisma";
 
-/**
- * TODO: migrar para endpoint de agência na REST API quando existir.
- * Requer: GET /agencies/:id/metrics com dados de clínicas e agendamentos consolidados.
- * Por ora mantém Prisma direto — não há endpoint correspondente na API NestJS.
- */
+// ── Helpers (espelham a lógica do agency.service.ts na API) ───────────────────
+
+function planFixedFee(monthlyAvg: number): number {
+  if (monthlyAvg > 80) return 2997;
+  if (monthlyAvg > 40) return 1997;
+  return 1497;
+}
+
+function cliffRate(clinicCreatedAt: Date, activeClinicsCount: number): number {
+  const months = (Date.now() - clinicCreatedAt.getTime()) / (1000 * 60 * 60 * 24 * 30.44);
+  if (months <= 3) return 0.20;
+  if (months <= 12) return 0.10;
+  // Fase 3: depende do tier da agência
+  if (activeClinicsCount >= 16) return 0.05;
+  if (activeClinicsCount >= 6) return 0.025;
+  return 0;
+}
+
+// ── Action ────────────────────────────────────────────────────────────────────
+
 export async function getAgencyMetrics() {
   const agency = await prisma.agency.findFirst({
     include: {
@@ -20,7 +35,7 @@ export async function getAgencyMetrics() {
 
   if (!agency) {
     return {
-      tier: "Bronze",
+      tier: "Certified",
       activeClinicsCount: 0,
       tierProgress: "0",
       clinicsToGold: 16,
@@ -35,12 +50,14 @@ export async function getAgencyMetrics() {
   }
 
   const activeClinicsCount = agency.clinics.length;
+
+  // Tiers: Certified ≤ 5, Silver 6-15, Gold 16+
+  let tier = "Certified";
+  if (activeClinicsCount >= 16) tier = "Gold";
+  else if (activeClinicsCount >= 6) tier = "Silver";
+
   const targetGold = 16;
   const tierProgress = Math.min((activeClinicsCount / targetGold) * 100, 100);
-
-  let tier = "Bronze";
-  if (activeClinicsCount >= 16) tier = "Gold";
-  else if (activeClinicsCount >= 8) tier = "Silver";
 
   let isSetupComplete = activeClinicsCount > 0;
   let missingMeta = false;
@@ -52,15 +69,20 @@ export async function getAgencyMetrics() {
   }
 
   let totalPaidAppointments = 0;
-  let totalRetainedRevenue = 0;
+  let agencyMargin = 0;
 
   agency.clinics.forEach((clinic) => {
-    const paid = clinic.appointments.filter((a) => a.status === "PAID");
-    totalPaidAppointments += paid.length;
-    totalRetainedRevenue += paid.length * clinic.reservationFee;
-  });
+    totalPaidAppointments += clinic.appointments.filter((a) => a.status === "PAID").length;
 
-  const agencyMargin = totalRetainedRevenue * agency.commissionRate;
+    // Calcular RevShare desta clínica: cliffRate × fixo do plano
+    const monthsActive = Math.max(
+      (Date.now() - clinic.createdAt.getTime()) / (1000 * 60 * 60 * 24 * 30.44),
+      1,
+    );
+    const monthlyAvg = clinic.appointments.length / monthsActive;
+    const rate = cliffRate(clinic.createdAt, activeClinicsCount);
+    agencyMargin += rate * planFixedFee(monthlyAvg);
+  });
 
   return {
     tier,
@@ -70,7 +92,7 @@ export async function getAgencyMetrics() {
     isSetupComplete,
     missingMeta,
     missingAsaas,
-    totalLeads: 0,
+    totalLeads: agency.clinics.reduce((sum, c) => sum + c.appointments.length, 0),
     totalPaidAppointments,
     agencyMargin,
     clinics: agency.clinics,

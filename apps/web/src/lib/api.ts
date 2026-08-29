@@ -44,6 +44,7 @@ export interface AppointmentResponse {
   id: string;
   status: "PENDING" | "PAID" | "COMPLETED" | "CANCELLED";
   procedureName: string;
+  durationMinutes: number;
   scheduledAt: string;
   handoffTime: string | null;
   slaViolated: boolean;
@@ -90,6 +91,18 @@ export interface ApiMessage {
 export interface MessagesResponse {
   source: "redis" | "database";
   messages: ApiMessage[];
+}
+
+export interface AgencyClinicResponse {
+  id: string;
+  name: string;
+  totalLeads: number;
+  totalPaid: number;
+  plan: "STARTER" | "GROWTH" | "SCALE";
+  fixedFee: number;
+  cliffPhase: 1 | 2 | 3;
+  cliffRate: number;
+  estimatedRevShare: number;
 }
 
 // ── Infra ─────────────────────────────────────────────────────────────────────
@@ -156,4 +169,14 @@ export function getPatients(clinicId: string) {
 
 export function getMessages(patientId: string) {
   return apiFetch<MessagesResponse>(`/patients/${patientId}/messages`);
+}
+
+export function triggerHandoff(appointmentId: string) {
+  return apiFetch<{ appointmentId: string }>(`/appointments/${appointmentId}/handoff`, {
+    method: "POST",
+  });
+}
+
+export function getAgencyClinics() {
+  return apiFetch<AgencyClinicResponse[]>("/agency/clinics");
 }

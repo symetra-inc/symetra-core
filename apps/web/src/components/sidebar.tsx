@@ -1,24 +1,30 @@
+import { auth } from "@/auth";
 import { SidebarNav } from "./sidebar-nav";
 
-export function Sidebar() {
+export async function Sidebar() {
+  const session = await auth();
+  const role = session?.user?.role ?? "CLINIC_ADMIN";
+
   return (
-    <aside className="w-60 border-r border-white/[0.06] bg-zinc-900/60 backdrop-blur-xl flex flex-col shrink-0">
-      {/* Logo */}
-      <div className="h-16 flex items-center px-6 border-b border-white/[0.06]">
-        <div className="w-7 h-7 bg-white rounded-lg flex items-center justify-center mr-3 shadow-[0_0_12px_rgba(255,255,255,0.15)]">
-          <span className="text-zinc-950 font-bold text-sm leading-none">S</span>
-        </div>
-        <span className="font-semibold tracking-widest text-xs uppercase text-white">
-          Symetra
+    <aside className="w-56 border-r border-[rgba(156,142,130,0.12)] bg-ink2 flex flex-col shrink-0">
+      {/* Wordmark */}
+      <div className="h-16 flex items-center px-5 border-b border-[rgba(156,142,130,0.12)]">
+        <span className="font-display font-bold text-linen text-[1.35rem] tracking-[-0.025em] leading-none">
+          Syme
+        </span>
+        <span className="font-display italic font-light text-gold text-[1.35rem] tracking-[-0.025em] leading-none">
+          tra
         </span>
       </div>
 
       {/* Nav */}
-      <SidebarNav />
+      <SidebarNav role={role} />
 
       {/* Footer */}
-      <div className="px-5 py-4 border-t border-white/[0.06]">
-        <p className="text-[10px] text-zinc-600 tracking-widest uppercase">v1.0 · Symetra OS</p>
+      <div className="px-5 py-4 border-t border-[rgba(156,142,130,0.12)]">
+        <p className="font-data text-[9px] text-ash/50 tracking-[0.2em] uppercase">
+          v1.0 · Symetra OS
+        </p>
       </div>
     </aside>
   );

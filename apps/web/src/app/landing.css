@@ -106,3 +106,9 @@ html, body, a, button { cursor: none; }
   transform: translateY(-50%);
   /* color/font set via Tailwind in JSX */
 }
+
+/* ── Mobile: hide cursor crosshair, restore native cursor ── */
+@media (max-width: 767px) {
+  html, body, a, button { cursor: auto; }
+  .ch, .ch-center { display: none; }
+}

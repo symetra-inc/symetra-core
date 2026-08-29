@@ -34,7 +34,7 @@ async function main() {
         ],
       },
       reservationFee: 100.0,
-      receptionistPhone: "5511999999999",
+      receptionistPhone: "5511947391058",
       receptionistName: "Maria",
     },
   });

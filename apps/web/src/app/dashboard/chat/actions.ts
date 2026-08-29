@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import { getMessages as apiGetMessages } from "@/lib/api";
+import { getMessages as apiGetMessages, triggerHandoff as apiTriggerHandoff } from "@/lib/api";
 
 // ─── Tipos serializáveis (Date → string para passar Server → Client) ──────────
 
@@ -24,6 +24,8 @@ export type PatientRow = {
   lastAppointmentCreatedAt: string | null;
   /** ISO string do handoff do agendamento mais recente (null = sem handoff ainda) */
   lastAppointmentHandoffTime: string | null;
+  /** ID do agendamento mais recente (para chamar POST /appointments/:id/handoff) */
+  lastAppointmentId: string | null;
 };
 
 export type MessageRow = {
@@ -68,6 +70,7 @@ export async function getPatients(): Promise<PatientRow[]> {
       lastAppointmentIsAiMuted: p.appointments[0]?.isAiMuted ?? null,
       lastAppointmentCreatedAt: p.appointments[0]?.createdAt.toISOString() ?? null,
       lastAppointmentHandoffTime: p.appointments[0]?.handoffTime?.toISOString() ?? null,
+      lastAppointmentId: p.appointments[0]?.id ?? null,
     }))
     .sort(
       (a, b) =>
@@ -193,4 +196,10 @@ export async function sendManualMessage(
     content: msg.content,
     createdAt: msg.createdAt.toISOString(),
   };
+}
+
+/** Chama POST /appointments/:id/handoff (seta isAiMuted=true + salva handoffTime) */
+export async function performHandoff(appointmentId: string): Promise<void> {
+  await apiTriggerHandoff(appointmentId);
+  revalidatePath("/dashboard/chat");
 }

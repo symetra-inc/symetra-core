@@ -20,8 +20,8 @@ export class CalendarService {
     return oauth2Client;
   }
 
-  async getAvailableSlots(dateFrom: string, dateTo: string): Promise<string[]> {
-    this.logger.log(`[CALENDAR] Consultando disponibilidade de ${dateFrom} até ${dateTo}`);
+  async getAvailableSlots(dateFrom: string, dateTo: string, durationMinutes = 60): Promise<string[]> {
+    this.logger.log(`[CALENDAR] Consultando disponibilidade de ${dateFrom} até ${dateTo} (duração: ${durationMinutes}min)`);
 
     const calendarId = process.env.GOOGLE_CALENDAR_ID || 'primary';
 
@@ -53,29 +53,36 @@ export class CalendarService {
           end: new Date(e.end!.dateTime!),
         }));
 
-      // Slots travados por Appointments PENDING (Pix gerado, aguardando pagamento)
+      // Estende o início da query para capturar agendamentos que começaram antes
+      // de dateFrom mas se estendem para dentro do período
+      const extendedFrom = new Date(new Date(dateFrom).getTime() - 8 * 60 * 60 * 1000);
+
+      // Slots travados por Appointments PENDING (com lock ativo) ou PAID
       const pendingAppointments = await this.prisma.appointment.findMany({
         where: {
-          status: 'PENDING',
-          lockedUntil: { gt: new Date() }, // trava ainda ativa
           scheduledAt: {
-            gte: new Date(dateFrom),
+            gte: extendedFrom,
             lte: new Date(dateTo),
           },
+          OR: [
+            { status: 'PENDING', lockedUntil: { gt: new Date() } },
+            { status: 'PAID' },
+          ],
         },
-        select: { scheduledAt: true },
+        select: { scheduledAt: true, durationMinutes: true },
       });
 
       const pendingLocks = pendingAppointments.map(a => ({
         start: a.scheduledAt,
-        end: new Date(a.scheduledAt.getTime() + 60 * 60 * 1000),
+        end: new Date(a.scheduledAt.getTime() + (a.durationMinutes ?? 60) * 60 * 1000),
       }));
 
-      this.logger.log(`[CALENDAR] ${pendingLocks.length} slot(s) travado(s) por Pix pendente.`);
+      this.logger.log(`[CALENDAR] ${pendingLocks.length} slot(s) bloqueado(s) por agendamentos.`);
 
       const allBusy = [...busyIntervals, ...pendingLocks];
+      const durationMs = durationMinutes * 60 * 1000;
 
-      // Gera slots disponíveis
+      // Gera slots disponíveis com granularidade de 1h
       const availableSlots: string[] = [];
       const windowStart = new Date(dateFrom);
       const windowEnd = new Date(dateTo);
@@ -88,10 +95,11 @@ export class CalendarService {
           const slotStart = new Date(cursor);
           slotStart.setHours(hour, 0, 0, 0);
 
-          const slotEnd = new Date(cursor);
-          slotEnd.setHours(hour + 1, 0, 0, 0);
+          const slotEnd = new Date(slotStart.getTime() + durationMs);
 
+          // Slot fora da janela de busca ou ultrapassa 18h
           if (slotStart < windowStart || slotStart >= windowEnd) continue;
+          if (slotEnd > new Date(new Date(cursor).setHours(18, 0, 0, 0))) continue;
 
           const isBusy = allBusy.some(
             busy => slotStart < busy.end && slotEnd > busy.start,
@@ -112,7 +120,7 @@ export class CalendarService {
       return [];
     }
   }
-  
+
   /**
    * Cria um evento no Google Calendar para o agendamento confirmado.
    * Retorna o eventId para persistir no Appointment.
@@ -122,6 +130,7 @@ export class CalendarService {
     patientPhone: string;
     procedureName: string;
     scheduledAt: Date;
+    durationMinutes?: number;
   }): Promise<string | null> {
     const calendarId = process.env.GOOGLE_CALENDAR_ID || 'primary';
 
@@ -135,7 +144,17 @@ export class CalendarService {
       const calendar = google.calendar({ version: 'v3', auth });
 
       const startTime = appointment.scheduledAt;
-      const endTime = new Date(startTime.getTime() + 60 * 60 * 1000); // +1 hora
+
+      // Coerção explícita: protege contra null (appointments antigos) e serialização como string
+      const rawDuration = appointment.durationMinutes;
+      const durationMinutes = Number(rawDuration) || 60;
+      if (!rawDuration) {
+        this.logger.warn(
+          `[CALENDAR] durationMinutes ausente para ${appointment.patientName}/${appointment.procedureName} — usando fallback 60min`,
+        );
+      }
+
+      const endTime = new Date(startTime.getTime() + durationMinutes * 60 * 1000);
 
       const response = await calendar.events.insert({
         calendarId,

@@ -96,6 +96,7 @@ export class ClinicsService {
         id: true,
         status: true,
         procedureName: true,
+        durationMinutes: true,
         scheduledAt: true,
         handoffTime: true,
         slaViolated: true,

@@ -1,6 +1,5 @@
 "use client";
 
-import { AlertTriangle } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 interface Appointment {
@@ -9,7 +8,6 @@ interface Appointment {
   createdAt: Date | string;
 }
 
-/** 8 minutos sem handoff em agendamento PENDING = SLA em risco */
 const THRESHOLD_MS = 8 * 60 * 1000;
 
 export function SlaRiskBadge({ appointments }: { appointments: Appointment[] }) {
@@ -27,9 +25,9 @@ export function SlaRiskBadge({ appointments }: { appointments: Appointment[] }) 
   return (
     <button
       onClick={() => router.push("/dashboard/chat")}
-      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-medium hover:bg-red-500/15 transition-colors"
+      className="inline-flex items-center gap-2 px-3 py-1.5 bg-[rgba(180,83,9,0.06)] border border-[rgba(180,83,9,0.18)] rounded-full font-data text-[9px] text-[#92400E] tracking-[0.07em] uppercase hover:bg-[rgba(180,83,9,0.10)] transition-colors"
     >
-      <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+      <span className="w-1.5 h-1.5 rounded-full bg-[#92400E] animate-pulse shrink-0" />
       {count} lead{count > 1 ? "s" : ""} com SLA em risco
     </button>
   );

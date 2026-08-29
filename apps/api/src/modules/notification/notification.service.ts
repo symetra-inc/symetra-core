@@ -25,10 +25,11 @@ export class NotificationService {
     }
 
     const text =
-      `Nova transferência para atendimento humano.\n` +
+      `✅ Pagamento confirmado — novo agendamento.\n` +
       `Paciente: ${patientName}\n` +
-      `Resumo: ${handoffSummary}\n` +
-      `Telefone: ${patientPhone}`;
+      `Procedimento: ${handoffSummary}\n` +
+      `Telefone: ${patientPhone}\n` +
+      `Entre em contato para confirmar os detalhes.`;
 
     // Fire-and-forget — falha não bloqueia o endpoint
     this.whatsapp.sendMessage(clinicWhatsappNumberId, receptionistPhone, text).catch((err) => {
