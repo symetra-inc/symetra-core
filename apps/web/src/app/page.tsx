@@ -335,7 +335,8 @@ export default function Home() {
       </header>
 
       {/* ── HERO ── */}
-      <section id="hero" className="relative z-10 min-h-screen grid grid-cols-1 md:grid-cols-2 items-center gap-8 md:gap-16 px-6 md:px-12 pt-24 md:pt-32 pb-16 md:pb-20">
+      <section id="hero" className="relative z-10 min-h-screen flex items-center px-6 md:px-12 pt-24 md:pt-32 pb-16 md:pb-20">
+        <div className="w-full max-w-[1160px] mx-auto grid grid-cols-1 md:grid-cols-2 items-center gap-8 md:gap-16">
         <div className="max-w-xl">
           <div className="hero-eyebrow flex items-center gap-2.5 mb-8">
             <span className="w-5 h-px" style={{ background: 'rgba(197,160,89,.5)' }} />
@@ -391,6 +392,7 @@ export default function Home() {
             <div ref={ctrRef} className="text-[2.6rem] font-medium text-[#C5A059] leading-none" style={{ fontFamily: 'var(--font-jetbrains)', letterSpacing: '-.02em' }}>R$ 0</div>
             <div className="text-[10px] text-[#9C8E82] mt-1.5">Pix de reserva confirmados</div>
           </div>
+        </div>
         </div>
       </section>
 
