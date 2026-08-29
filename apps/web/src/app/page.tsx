@@ -284,8 +284,9 @@ export default function Home() {
       <canvas ref={canvasRef} id="particles" />
 
       {/* ── HEADER ── */}
-      <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between md:grid md:grid-cols-3 px-6 md:px-12 py-5 border-b border-[rgba(156,142,130,0.18)] bg-[rgba(14,12,10,0.88)] backdrop-blur-lg">
-        
+      <header className="fixed top-0 left-0 right-0 z-50 border-b border-[rgba(156,142,130,0.18)] bg-[rgba(14,12,10,0.88)] backdrop-blur-lg">
+        <div className="max-w-[1160px] mx-auto flex items-center justify-between md:grid md:grid-cols-3 px-6 md:px-12 py-5">
+
         {/* Esquerda: Logo */}
         <div className="justify-self-start">
           <div style={{ fontFamily: 'var(--font-fraunces)', fontSize: '1.2rem', fontWeight: 700, letterSpacing: '-.01em' }}>
@@ -332,6 +333,7 @@ export default function Home() {
           </a>
         </nav>
 
+        </div>
       </header>
 
       {/* ── HERO ── */}
