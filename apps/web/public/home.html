@@ -32,6 +32,71 @@ body{margin:0;background:#FBFBF9;}
 a{color:#0B1220}a:hover{color:#0E7A4B}
 </style>
 <style>html{scroll-behavior:smooth}</style>
+<script>document.documentElement.classList.add("js")</script>
+<style>
+/* ── Motion: só transform/opacity, respeita "reduzir movimento" ── */
+:root{--m-out:cubic-bezier(.22,1,.36,1);--m-spring:cubic-bezier(.34,1.56,.64,1)}
+html{-webkit-tap-highlight-color:transparent}
+a{touch-action:manipulation}
+section[id]{scroll-margin-top:12px}
+
+@media (prefers-reduced-motion: no-preference){
+  @keyframes m-show{to{opacity:1;transform:none}}
+  @keyframes m-up{from{opacity:0;transform:translate3d(0,32px,0)}to{opacity:1;transform:none}}
+  @keyframes m-down{from{opacity:0;transform:translate3d(0,-14px,0)}to{opacity:1;transform:none}}
+  @keyframes m-pop{from{opacity:0;transform:scale(.35) translate3d(0,12px,0)}to{opacity:1;transform:none}}
+  @keyframes m-rise{from{transform:translate3d(0,110%,0) rotate(4deg)}to{transform:none}}
+  @keyframes m-clip{from{clip-path:inset(100% 0 0 0 round 20px);transform:scale(1.12)}to{clip-path:inset(0 0 0 0 round 20px);transform:none}}
+  @keyframes m-line{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+  @keyframes m-ink{from{background-size:0% 2px}to{background-size:100% 2px}}
+  @keyframes m-shine{0%{transform:translateX(0) skewX(-20deg)}28%,100%{transform:translateX(420%) skewX(-20deg)}}
+  @keyframes m-ring{0%{box-shadow:0 0 0 0 rgba(111,211,162,.55)}70%,100%{box-shadow:0 0 0 18px rgba(111,211,162,0)}}
+
+  /* Antes do script: esconde só o topo; se o script falhar, aparece sozinho em 2,5s */
+  .js:not(.m-ready) header,
+  .js:not(.m-ready) header + section > *{opacity:0;animation:m-show .4s 2.5s forwards}
+
+  .js [data-m]:not(.is-in){opacity:0}
+  .js [data-m].is-in{animation:m-up .9s var(--m-out) var(--d,0ms) backwards}
+  .js [data-m="down"].is-in{animation-name:m-down;animation-duration:.7s}
+  .js [data-m="pop"].is-in{animation:m-pop .8s var(--m-spring) var(--d,0ms) backwards;transform-origin:left bottom}
+  .js [data-m="photo"]:not(.is-in){opacity:1;clip-path:inset(100% 0 0 0 round 20px)}
+  .js [data-m="photo"].is-in{animation:m-clip 1.2s var(--m-out) var(--d,0ms) backwards}
+
+  /* Título do hero: palavra por palavra, saindo de uma máscara */
+  .m-word{display:inline-block;overflow:hidden;vertical-align:top;padding:.1em 0 .12em;margin:-.1em 0 -.12em}
+  .m-word > span{display:inline-block;transform-origin:left bottom}
+  .m-go .m-word > span{animation:m-rise 1s var(--m-out) var(--d,0ms) backwards}
+
+  /* Linha de destaque que se desenha no topo de cada card */
+  .m-card{position:relative}
+  .m-card::before{content:"";position:absolute;top:-1px;left:16px;right:16px;height:2px;border-radius:2px;background:#0E7A4B;transform:scaleX(0);transform-origin:left center}
+  #vazamentos .m-card::before{background:#6FD3A2;left:32px;right:32px}
+  .m-card.is-in::before{animation:m-line 1.1s var(--m-out) calc(var(--d,0ms) + 350ms) both}
+
+  /* "isso é aqui" ganha um sublinhado que se desenha */
+  .m-ink{background:linear-gradient(currentColor,currentColor) left 100% / 0% 2px no-repeat;padding-bottom:2px}
+  .is-in .m-ink{animation:m-ink .9s var(--m-out) .7s both}
+
+  /* Brilho que passa no CTA principal */
+  .m-shine{position:relative;overflow:hidden;isolation:isolate}
+  .m-shine::after{content:"";position:absolute;top:0;bottom:0;left:-45%;width:35%;z-index:-1;pointer-events:none;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.32),transparent);animation:m-shine 5s 2.2s var(--m-out) infinite}
+
+  /* Pulso suave no CTA final */
+  .m-pulse{position:relative}
+  .m-pulse::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;animation:m-ring 2.6s 1.2s ease-out infinite}
+
+  /* Barra de progresso de leitura */
+  .m-progress{position:fixed;top:0;left:0;right:0;height:3px;z-index:60;pointer-events:none;background:#0E7A4B;transform:scaleX(0);transform-origin:0 50%}
+
+  /* Toque: resposta física nos botões e cards */
+  a[href*="wa.me"]{transition:transform .18s var(--m-out),filter .18s}
+  a[href*="wa.me"]:active{transform:scale(.96);filter:brightness(.94)}
+  .m-card{transition:transform .25s var(--m-out)}
+  .m-card:active{transform:scale(.985)}
+}
+</style>
 </head>
 <body>
 <div style="font-family: Inter, system-ui, sans-serif; color: #0B1220; background: #FBFBF9; width: 100%; line-height: 1.55">
@@ -92,7 +157,7 @@ a{color:#0B1220}a:hover{color:#0E7A4B}
 <p style="margin: 12px 0 0; color: #A9B3C4">Tem gente sendo paga para copiar e colar o dia inteiro.</p>
 </div>
 </div>
-<p style="margin: 48px 0 0; font-size: 20px; max-width: 760px">Se você leu um desses e pensou <strong style="color: #6FD3A2">"isso é aqui"</strong>, a conversa já vale a pena.</p>
+<p style="margin: 48px 0 0; font-size: 20px; max-width: 760px">Se você leu um desses e pensou <strong style="color: #6FD3A2">“isso é aqui”</strong>, a conversa já vale a pena.</p>
 </div>
 </section>
 
@@ -187,7 +252,7 @@ a{color:#0B1220}a:hover{color:#0E7A4B}
 <p style="margin: 0; font-family: 'Bricolage Grotesque', sans-serif; font-size: 26px; font-weight: 700">Não é para você se…</p>
 <ul style="margin: 20px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 12px; color: #3A4250">
 <li>A prioridade é achar o mais barato, não o que se paga.</li>
-<li>Quer "um sistema" sem saber qual problema ele resolve.</li>
+<li>Quer “um sistema” sem saber qual problema ele resolve.</li>
 <li>Espera que tecnologia conserte um processo que ninguém segue.</li>
 </ul>
 </div>
@@ -201,7 +266,7 @@ a{color:#0B1220}a:hover{color:#0E7A4B}
 <div style="flex: 1 1 420px; min-width: 0">
 <p style="margin: 0 0 16px; font-size: 14px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #0E7A4B">Quem está por trás</p>
 <h2 style="margin: 0; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: clamp(28px, 3.2vw, 40px); line-height: 1.12; letter-spacing: -0.02em">Você fala com quem constrói, não com um vendedor.</h2>
-<p style="margin: 20px 0 0; font-size: 18px; color: #3A4250">Sou Guilherme Guedes, desenvolvedor e especialista em automação. Hoje cuido de agentes de IA que atendem mais de 1 milhão de conversas por mês, e antes passei 18 meses na TI de uma rede com quase 90 lojas, criando automações que rodam até hoje. Atendo cada cliente pessoalmente, do diagnóstico ao suporte. Se algo der problema, quem responde é quem fez.</p>
+<p style="margin: 20px 0 0; font-size: 18px; color: #3A4250">Sou Guilherme Guedes, desenvolvedor e especialista em automação. Hoje cuido de agentes de IA que atendem mais de 1 milhão de conversas por mês, e antes passei 18 meses na TI de uma rede com quase 90 lojas, criando automações que seguem em uso. Atendo cada cliente pessoalmente, do diagnóstico ao suporte. Se algo der problema, quem responde é quem fez.</p>
 </div>
 </div>
 </section>
@@ -256,5 +321,102 @@ a{color:#0B1220}a:hover{color:#0E7A4B}
 </footer>
 
 </div>
+<script>
+(function () {
+  var d = document, root = d.documentElement;
+  if (!window.matchMedia || matchMedia('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)) {
+    root.classList.remove('js');
+    return;
+  }
+  var all = function (s, r) { return Array.prototype.slice.call((r || d).querySelectorAll(s)); };
+  var esc = function (t) { return t.replace(/&/g, '&amp;').replace(/</g, '&lt;'); };
+
+  /* Hero: entrada orquestrada no carregamento */
+  var header = d.querySelector('header');
+  var hero = d.querySelector('header + section');
+  var h1 = hero.querySelector('h1');
+  var text = h1.textContent.trim();
+  var words = text.split(/\s+/);
+  h1.setAttribute('aria-label', text);
+  h1.innerHTML = words.map(function (w, i) {
+    return '<span class="m-word" aria-hidden="true"><span style="--d:' + (160 + i * 55) + 'ms">' + esc(w) + '</span></span>';
+  }).join(' ');
+  var after = 160 + words.length * 55;
+  header.setAttribute('data-m', 'down');
+  var heroItems = Array.prototype.slice.call(hero.children);
+  var delays = [40, 0, after + 80, after + 220, after + 380];
+  heroItems.forEach(function (el, i) {
+    if (el === h1) return;
+    el.setAttribute('data-m', '');
+    el.style.setProperty('--d', (delays[i] || after) + 'ms');
+  });
+  var cta = hero.querySelector('a[href*="wa.me"]');
+  if (cta) cta.classList.add('m-shine');
+
+  root.classList.add('m-ready');
+  h1.classList.add('m-go');
+  [header].concat(heroItems).forEach(function (el) { el.classList.add('is-in'); });
+
+  /* Resto da página: marca blocos e cards para revelar ao rolar */
+  var isList = function (el) { return el.style.display === 'grid' || el.style.flexDirection === 'column'; };
+  function walk(el) {
+    var list = isList(el);
+    Array.prototype.forEach.call(el.children, function (c) {
+      if (list) {
+        c.setAttribute('data-m', '');
+        if (c.style.background || c.style.borderRadius) c.classList.add('m-card');
+      } else if (c.tagName === 'DIV' && c.children.length) {
+        walk(c);
+      } else if (c.tagName === 'IMG') {
+        c.setAttribute('data-m', 'photo');
+      } else if (c.tagName === 'P' && c.style.fontSize === '56px') {
+        c.setAttribute('data-m', 'pop');
+      } else {
+        c.setAttribute('data-m', '');
+      }
+    });
+  }
+  all('section').forEach(function (s) { if (s !== hero) walk(s); });
+
+  /* Passos 1-2-3: números e textos de cada passo entram em sequência */
+  all('[data-m="pop"]').forEach(function (n, col) {
+    var off = innerWidth >= 700 ? col * 140 : 0;
+    Array.prototype.forEach.call(n.parentNode.children, function (c, i) { c.style.setProperty('--d', (off + i * 90) + 'ms'); });
+  });
+  all('#vazamentos strong').forEach(function (s) { s.classList.add('m-ink'); });
+  all('section:last-of-type a[href*="wa.me"]').forEach(function (a) { a.classList.add('m-pulse'); });
+
+  /* Revela uma vez, escalonando o que entra na tela ao mesmo tempo */
+  var io = new IntersectionObserver(function (entries) {
+    var batch = entries.filter(function (e) { return e.isIntersecting; });
+    batch.forEach(function (e, i) {
+      var el = e.target;
+      if (!el.style.getPropertyValue('--d')) el.style.setProperty('--d', Math.min(i, 5) * 90 + 'ms');
+      el.classList.add('is-in');
+      io.unobserve(el);
+    });
+  }, { rootMargin: '0px 0px -10% 0px' });
+  all('[data-m]:not(.is-in)').forEach(function (el) { io.observe(el); });
+
+  /* Barra de progresso de leitura */
+  var bar = d.createElement('div');
+  bar.className = 'm-progress';
+  bar.setAttribute('aria-hidden', 'true');
+  d.body.appendChild(bar);
+  var ticking = false;
+  function paint() {
+    var max = root.scrollHeight - innerHeight;
+    // No fim da página nada mais cruza a linha de disparo: revela o que sobrou
+    if (scrollY >= max - 4) all('[data-m]:not(.is-in)').forEach(function (el, i) {
+      el.style.setProperty('--d', Math.min(i, 5) * 90 + 'ms'); el.classList.add('is-in'); io.unobserve(el);
+    });
+    bar.style.transform = 'scaleX(' + (max > 0 ? Math.min(1, scrollY / max) : 0) + ')';
+    ticking = false;
+  }
+  addEventListener('scroll', function () { if (!ticking) { ticking = true; requestAnimationFrame(paint); } }, { passive: true });
+  addEventListener('resize', paint, { passive: true });
+  paint();
+})();
+</script>
 </body>
 </html>
