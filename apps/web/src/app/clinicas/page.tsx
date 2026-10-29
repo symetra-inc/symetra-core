@@ -1,6 +1,6 @@
 'use client'
 
-import './landing.css'
+import '../landing.css'
 import { useEffect, useRef, useState } from 'react'
 import { Fraunces, Instrument_Sans, JetBrains_Mono } from 'next/font/google'
 

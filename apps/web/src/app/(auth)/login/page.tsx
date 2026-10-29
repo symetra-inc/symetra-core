@@ -17,7 +17,7 @@ export default function LoginPage() {
 
       <div className="absolute top-8 left-8">
         <Link
-          href="/"
+          href="/clinicas"
           className="flex items-center text-sm text-zinc-500 hover:text-white transition-colors"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
