@@ -9,6 +9,9 @@ function getSecretKey(): Uint8Array {
 }
 
 export const authConfig: NextAuthConfig = {
+  // Sem AUTH_SECRET o NextAuth quebra e o middleware deixa tudo passar; o JWT já usa o JWT_SECRET.
+  secret: process.env.AUTH_SECRET || process.env.JWT_SECRET,
+  trustHost: true,
   pages: {
     signIn: "/login",
   },
