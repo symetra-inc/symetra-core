@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { PREVIEW, previewApi } from "./preview";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
 
@@ -122,6 +123,7 @@ async function getAuthToken(): Promise<string | null> {
 }
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  if (PREVIEW) return previewApi(path, init) as T;
   const token = await getAuthToken();
   const res = await fetch(`${BASE_URL}${path}`, {
     ...init,

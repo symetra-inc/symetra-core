@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 
-// Landing antiga da Symetra para clínicas. Fica fora do índice e sem link na home.
+// Arquivada: landing antiga do produto para clínicas. Fora do Google e sem link na home.
 export const metadata: Metadata = {
   title: 'Symetra · Clínicas',
   robots: { index: false, follow: false },

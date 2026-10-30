@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { PREVIEW, previewChatPatients } from "@/lib/preview";
 import { revalidatePath } from "next/cache";
 import { getMessages as apiGetMessages, triggerHandoff as apiTriggerHandoff } from "@/lib/api";
 
@@ -43,6 +44,7 @@ export type MessageRow = {
  * Por ora mantém Prisma direto pois a API não retorna esses campos.
  */
 export async function getPatients(): Promise<PatientRow[]> {
+  if (PREVIEW) return previewChatPatients();
   const patients = await prisma.patient.findMany({
     include: {
       messages: {
@@ -101,6 +103,7 @@ export async function toggleBotStatus(
   patientId: string,
   pause: boolean
 ): Promise<void> {
+  if (PREVIEW) return;
   await prisma.patient.update({
     where: { id: patientId },
     data: {
@@ -145,6 +148,7 @@ export async function sendManualMessage(
   patientId: string,
   content: string
 ): Promise<MessageRow> {
+  if (PREVIEW) return { id: `preview-${Date.now()}`, role: "HUMAN", content, createdAt: new Date().toISOString() };
   const patient = await prisma.patient.findUnique({
     where: { id: patientId },
     include: { clinic: true },

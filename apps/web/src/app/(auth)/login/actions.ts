@@ -2,11 +2,12 @@
 
 import { signIn } from "@/auth";
 import { AuthError } from "next-auth";
-import { prisma } from "@/lib/prisma"; 
+import { prisma } from "@/lib/prisma";
+import { homeForRole } from "@/lib/home-route";
 
   export async function authenticate(prevState: string | undefined, formData: FormData) {
   const email = formData.get("email") as string;
-  let targetRoute = "/dashboard"; // Rota padrão (Clínica)
+  let targetRoute = "/dashboard";
 
   try {
     // 1. Descobrimos quem é o cara direto na fonte da verdade (Banco)
@@ -16,12 +17,7 @@ import { prisma } from "@/lib/prisma";
     });
 
     // 2. Definimos a rota correta antes de autenticar
-    if (user?.role === "AGENCY_ADMIN") {
-      targetRoute = "/dashboard/agency";
-    } else if (user?.role === "MASTER") {
-      targetRoute = "/dashboard/agency"; // Por enquanto, Master vê a agência
-    }
-    // CLINIC_ADMIN e RECEPTIONIST vão para /dashboard (default)
+    targetRoute = homeForRole(user?.role);
 
     // 3. Autenticamos e forçamos o NextAuth a fazer o redirecionamento interno
     await signIn("credentials", {

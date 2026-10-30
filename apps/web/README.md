@@ -1,36 +1,29 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Symetra · web
 
-## Getting Started
+Um único app Next.js serve o site e o painel em www.symetra.com.br.
 
-First, run the development server:
+## Rotas
+
+| Rota | O que é | Onde fica | No Google? |
+| :--- | :--- | :--- | :--- |
+| `/` | Site da Symetra (serviços sob medida) | `public/home.html` (HTML estático, servido por rewrite no `next.config.ts`) | Sim |
+| `/blog` | Artigos para SEO | `src/app/blog/` (novos artigos em `posts.ts`) | Sim |
+| `/clinicas` | Landing antiga do produto para clínicas (arquivada) | `src/app/clinicas/` | Não (noindex) |
+| `/contabilidade` | Landing antiga de teste (arquivada) | `src/app/contabilidade/` | Não (noindex) |
+| `/login` | Entrada do painel | `src/app/(auth)/login/` | Não (noindex) |
+| `/dashboard/*` | Painel (clínica e agência); exige login | `src/app/dashboard/` | Não |
+| `/logout`, `/sair` | Encerram a sessão | `src/app/logout/` | — |
+| `/inbox`, `/dashboards` | Atalhos para o painel | redirects no `next.config.ts` | — |
+
+Regras:
+
+- Página nova do site: crie a pasta em `src/app/` e, se for pública, adicione no `src/app/sitemap.ts`.
+- Página antiga que não deve aparecer no Google: `robots: { index: false }` no `layout.tsx` dela (não bloqueie no `robots.ts`).
+- O login só é verificado em `/dashboard` (`src/middleware.ts`). O site público não depende do banco nem da autenticação.
+
+## Rodar
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm dev                                  # desenvolvimento, porta 3000
+pnpm build && AUTH_TRUST_HOST=true pnpm start   # produção local (na Vercel o AUTH_TRUST_HOST é automático)
 ```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

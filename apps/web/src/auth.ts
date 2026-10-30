@@ -1,10 +1,11 @@
-import NextAuth, { type DefaultSession } from "next-auth";
+import NextAuth, { type DefaultSession, type Session } from "next-auth";
 import type { JWT } from "next-auth/jwt";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { authConfig } from "@/auth.config";
+import { PREVIEW, previewSession } from "@/lib/preview";
 
 // ── Type augmentations ────────────────────────────────────────────────────────
 
@@ -33,7 +34,7 @@ declare module "next-auth/jwt" {
   }
 }
 
-export const { handlers, signIn, signOut, auth } = NextAuth({
+const nextAuth = NextAuth({
   ...authConfig,
   providers: [
     CredentialsProvider({
@@ -73,3 +74,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
 });
+
+export const { handlers, signIn, signOut } = nextAuth;
+
+// Em DASHBOARD_PREVIEW=1 (só local) devolve uma sessão fictícia de clínica.
+export const auth = async (): Promise<Session | null> => (PREVIEW ? previewSession : nextAuth.auth());

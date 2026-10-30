@@ -48,27 +48,27 @@ export function PixChart({ data }: { data: PixData[] }) {
             dataKey="label"
             axisLine={false}
             tickLine={false}
-            tick={{ fill: "#9C8E82", fontSize: 10, fontFamily: "var(--font-jetbrains, monospace)" }}
+            tick={{ fill: "var(--color-ash)", fontSize: 10, fontFamily: "var(--font-jetbrains, monospace)" }}
           />
           <YAxis hide domain={[0, max + 1]} allowDecimals={false} />
           <Tooltip
             cursor={{ fill: "rgba(197,160,89,0.04)" }}
             contentStyle={{
-              background: "#1A1714",
+              background: "var(--color-ink2)",
               border: "0.5px solid rgba(156,142,130,0.18)",
               borderRadius: 6,
               fontSize: 11,
-              color: "#F5F0E8",
+              color: "var(--color-linen)",
               fontFamily: "var(--font-jetbrains, monospace)",
             }}
             formatter={(v) => [v ?? 0, "confirmados"]}
-            labelStyle={{ color: "#9C8E82", marginBottom: 2 }}
+            labelStyle={{ color: "var(--color-ash)", marginBottom: 2 }}
           />
           <Bar dataKey="count" radius={[3, 3, 0, 0]}>
             {chartData.map((entry, i) => (
               <Cell
                 key={i}
-                fill={entry.count > 0 ? "#C5A059" : "rgba(156,142,130,0.10)"}
+                fill={entry.count > 0 ? "var(--color-gold)" : "rgba(156,142,130,0.10)"}
               />
             ))}
           </Bar>

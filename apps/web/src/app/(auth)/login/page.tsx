@@ -1,104 +1,65 @@
-"use client";
-
+import type { Metadata } from "next";
 import Link from "next/link";
-import { Inter } from "next/font/google";
-import { ArrowLeft, AlertCircle, Eye, EyeOff } from "lucide-react";
-import { useActionState, useState } from "react";
-import { authenticate } from "./actions";
+import { auth, signOut } from "@/auth";
+import { homeForRole } from "@/lib/home-route";
+import { LoginForm } from "./LoginForm";
 
-const inter = Inter({ subsets: ["latin"], weight: ["300", "400", "500", "600"] });
+export const metadata: Metadata = {
+  title: "Entrar | Symetra",
+  robots: { index: false, follow: false },
+};
 
-export default function LoginPage() {
-  const [errorMessage, formAction, isPending] = useActionState(authenticate, undefined);
-  const [showPassword, setShowPassword] = useState(false);
+export default async function LoginPage() {
+  const session = await auth();
+  const user = session?.user;
 
   return (
-    <div className={`min-h-screen flex flex-col bg-zinc-950 text-white ${inter.className}`}>
-
-      <div className="absolute top-8 left-8">
-        <Link
-          href="/clinicas"
-          className="flex items-center text-sm text-zinc-500 hover:text-white transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Voltar para Home
+    <div className="theme-light min-h-screen flex flex-col bg-ink text-linen font-ui">
+      <div className="px-6 pt-6 md:px-8 md:pt-8">
+        <Link href="/" className="text-sm text-ash hover:text-linen transition-colors">
+          ← Voltar para o site
         </Link>
       </div>
 
-      <div className="flex-1 flex items-center justify-center px-4">
-        <div className="w-full max-w-sm space-y-8">
-
-          {/* Logo */}
-          <div className="text-center">
-            <div className="w-11 h-11 border border-zinc-800 rounded-xl flex items-center justify-center bg-zinc-900 mx-auto mb-6">
-              <span className="text-white font-bold text-xl leading-none">S</span>
-            </div>
-            <h2 className="text-2xl font-semibold tracking-tight text-white mb-2">
-              Acesso Restrito
-            </h2>
-            <p className="text-sm text-zinc-400">
-              Insira suas credenciais para acessar a infraestrutura.
+      <div className="flex-1 flex items-center justify-center px-4 pb-16">
+        <div className="w-full max-w-sm">
+          <div className="text-center mb-8">
+            <p className="font-display font-bold text-[1.6rem] tracking-[-0.02em] leading-none mb-6">
+              Syme<span className="italic font-light text-gold">tra</span>
+            </p>
+            <h1 className="text-xl font-semibold tracking-tight mb-1.5">
+              {user ? "Você já está conectado" : "Entrar no painel"}
+            </h1>
+            <p className="text-sm text-ash">
+              {user ? (user.email ?? user.name ?? "") : "Use o e-mail e a senha que você recebeu."}
             </p>
           </div>
 
-          <form action={formAction} className="space-y-4">
-            <div className="space-y-1.5">
-              <label
-                htmlFor="email"
-                className="text-xs font-medium text-zinc-400 uppercase tracking-wider"
+          {user ? (
+            <div className="space-y-3">
+              <Link
+                href={homeForRole(user.role)}
+                className="flex items-center justify-center w-full h-11 rounded-xl bg-linen text-ink text-sm font-medium hover:opacity-90 transition-opacity"
               >
-                E-mail Profissional
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                className="w-full h-11 px-4 bg-zinc-900 border border-zinc-800 rounded-xl text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-600 transition-colors"
-                required
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label
-                htmlFor="password"
-                className="text-xs font-medium text-zinc-400 uppercase tracking-wider"
+                Continuar para o painel
+              </Link>
+              <form
+                action={async () => {
+                  "use server";
+                  await signOut({ redirectTo: "/login" });
+                }}
               >
-                Senha de Acesso
-              </label>
-              <div className="relative">
-                <input
-                  id="password"
-                  name="password"
-                  type={showPassword ? "text" : "password"}
-                  className="w-full h-11 px-4 pr-12 bg-zinc-900 border border-zinc-800 rounded-xl text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-600 transition-colors"
-                  required
-                />
                 <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors"
+                  type="submit"
+                  className="w-full h-11 rounded-xl border border-[rgba(156,142,130,0.35)] text-sm text-ash hover:text-linen hover:border-[rgba(156,142,130,0.6)] transition-colors"
                 >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  Entrar com outra conta
                 </button>
-              </div>
+              </form>
             </div>
-
-            {errorMessage && (
-              <div className="flex items-center gap-2 text-red-400 text-xs font-medium bg-red-500/10 p-3 rounded-xl border border-red-500/20">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <p>{errorMessage}</p>
-              </div>
-            )}
-
-            <button
-              disabled={isPending}
-              type="submit"
-              className="w-full h-11 bg-white text-black hover:bg-zinc-200 text-sm font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-2"
-            >
-              {isPending ? "Autenticando..." : "Autenticar"}
-            </button>
-          </form>
-
+          ) : (
+            <LoginForm />
+          )}
         </div>
       </div>
     </div>

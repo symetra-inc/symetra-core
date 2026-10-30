@@ -1,7 +1,8 @@
-import { LogOut } from "lucide-react";
+import { LogOut, Moon, Sun } from "lucide-react";
 import { auth, signOut } from "@/auth";
+import { toggleTheme } from "@/app/dashboard/theme-actions";
 
-export async function Header() {
+export async function Header({ dark = false }: { dark?: boolean }) {
   const session = await auth();
   const name = session?.user?.name ?? "Operador";
 
@@ -13,6 +14,17 @@ export async function Header() {
         </span>
       </div>
 
+      <div className="flex items-center gap-2">
+      <form action={toggleTheme}>
+        <button
+          type="submit"
+          aria-label={dark ? "Usar tema claro" : "Usar tema escuro"}
+          title={dark ? "Tema claro" : "Tema escuro"}
+          className="flex items-center justify-center w-8 h-8 border border-[rgba(156,142,130,0.18)] rounded-[3px] text-ash hover:border-[rgba(156,142,130,0.4)] hover:text-linen transition-all duration-200"
+        >
+          {dark ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+        </button>
+      </form>
       <form
         action={async () => {
           "use server";
@@ -27,6 +39,7 @@ export async function Header() {
           Sair
         </button>
       </form>
+      </div>
     </header>
   );
 }

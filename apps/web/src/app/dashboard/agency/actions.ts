@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { PREVIEW, previewAgencyMetrics } from "@/lib/preview";
 
 // ── Helpers (espelham a lógica do agency.service.ts na API) ───────────────────
 
@@ -23,6 +24,7 @@ function cliffRate(clinicCreatedAt: Date, activeClinicsCount: number): number {
 // ── Action ────────────────────────────────────────────────────────────────────
 
 export async function getAgencyMetrics() {
+  if (PREVIEW) return previewAgencyMetrics() as never;
   const agency = await prisma.agency.findFirst({
     include: {
       clinics: {

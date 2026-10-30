@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 
-// Landing antiga da Symetra para contabilidades. Fica fora do índice e sem link na home.
+// Arquivada: landing antiga de teste. Fora do Google e sem link na home.
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
 }

@@ -1,4 +1,6 @@
+import { redirect } from "next/navigation";
 import { auth } from "@/auth";
+import { homeForRole } from "@/lib/home-route";
 import { getMetrics } from "@/lib/api";
 import { getAppointments } from "./actions";
 import { PixChart } from "@/components/metrics/PixChart";
@@ -10,6 +12,11 @@ import type { AppointmentRow } from "@/components/appointments/AppointmentsTable
 export default async function Page() {
   const session = await auth();
   const clinicId = session?.user?.clinicId;
+
+  // Agência/master sem clínica cai aqui ao digitar /dashboard: manda para o portal certo.
+  if (!clinicId && homeForRole(session?.user?.role) !== "/dashboard") {
+    redirect(homeForRole(session?.user?.role));
+  }
 
   if (!clinicId) {
     return (

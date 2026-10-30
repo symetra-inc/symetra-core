@@ -10,20 +10,20 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-[#FAFAFA] text-[#0A0A0A] shadow-sm hover:bg-[#FAFAFA]/90",
+          "bg-[var(--color-linen)] text-[var(--color-ink)] shadow-sm hover:bg-[var(--color-linen)]/90",
         destructive:
-          "bg-red-900 text-[#FAFAFA] shadow-sm hover:bg-red-900/90",
+          "bg-red-900 text-[var(--color-linen)] shadow-sm hover:bg-red-900/90",
         outline:
-          "border border-[#71717A]/50 bg-transparent shadow-sm hover:bg-[#71717A]/10 hover:text-[#FAFAFA]",
+          "border border-[#71717A]/50 bg-transparent shadow-sm hover:bg-[#71717A]/10 hover:text-[var(--color-linen)]",
         secondary:
-          "bg-[#27272A] text-[#FAFAFA] shadow-sm hover:bg-[#27272A]/80",
+          "bg-[var(--color-ink3)] text-[var(--color-linen)] shadow-sm hover:bg-[var(--color-ink3)]/80",
         ghost: 
-          "hover:bg-[#27272A]/50 hover:text-[#FAFAFA]",
+          "hover:bg-[var(--color-ink3)]/50 hover:text-[var(--color-linen)]",
         link: 
-          "text-[#FAFAFA] underline-offset-4 hover:underline",
+          "text-[var(--color-linen)] underline-offset-4 hover:underline",
         // A VARIANTE DE CONVERSÃO DO CMO
         gold: 
-          "bg-[#A38A5E] text-[#FAFAFA] shadow-[0_4px_14px_0_rgba(163,138,94,0.2)] hover:bg-[#A38A5E]/90",
+          "bg-[#A38A5E] text-[var(--color-linen)] shadow-[0_4px_14px_0_rgba(163,138,94,0.2)] hover:bg-[#A38A5E]/90",
       },
       size: {
         default: "h-9 px-4 py-2",

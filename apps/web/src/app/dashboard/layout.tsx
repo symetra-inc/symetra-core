@@ -1,13 +1,18 @@
+import { cookies } from "next/headers";
 import { Sidebar } from "@/components/sidebar";
 import { Header } from "@/components/header";
+import { THEME_COOKIE } from "./theme";
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  // Claro é o padrão; o escuro fica como opção no cabeçalho.
+  const dark = (await cookies()).get(THEME_COOKIE)?.value === "dark";
+
   return (
-    <div className="min-h-screen flex bg-zinc-950 text-white">
+    <div className={`${dark ? "" : "theme-light"} min-h-screen flex bg-ink text-linen`}>
       <Sidebar />
       <div className="flex flex-col flex-1 min-h-screen overflow-hidden">
-        <Header />
-        <main className="flex-1 overflow-y-auto p-8 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(255,255,255,0.03),transparent)]">
+        <Header dark={dark} />
+        <main className="flex-1 overflow-y-auto p-8">
           {children}
         </main>
       </div>

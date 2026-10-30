@@ -383,7 +383,7 @@ export default function Home() {
                 <CheckCircleIcon />
               </div>
               <div>
-                <div className="text-[8px] tracking-[.1em] uppercase text-[#9C8E82]" style={{ fontFamily: 'var(--font-jetbrains)' }}>Asaas · Pix recebido</div>
+                <div className="text-[8px] tracking-[.1em] uppercase text-[#9C8E82]" style={{ fontFamily: 'var(--font-jetbrains)' }}>Pix recebido</div>
                 <div className="text-[12px] font-medium text-[#C5A059] mt-0.5" style={{ fontFamily: 'var(--font-jetbrains)' }}>{amt}</div>
               </div>
             </div>
@@ -540,7 +540,7 @@ export default function Home() {
         <div className="max-w-[1000px] mx-auto grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-24 items-center">
           <div className="reveal">
             <div className="text-[9px] tracking-[.2em] uppercase mb-5" style={{ fontFamily: 'var(--font-jetbrains)', color: '#A8854A' }}>
-              Programa de parceria - Você não é o problema<em style={{ fontStyle: 'italic', fontWeight: 400, color: '#C5A059' }}>tra</em>
+              Programa de parceria para agências
             </div>
             <h2 className="text-[clamp(2rem,3.2vw,2.8rem)] font-bold tracking-tight leading-[1.1] mb-5 text-[#0E0C0A]"
                 style={{ fontFamily: 'var(--font-fraunces)' }}>
@@ -548,7 +548,7 @@ export default function Home() {
               <em style={{ fontStyle: 'italic', fontWeight: 400, color: '#A8854A' }}>cliques.</em>
             </h2>
             <p className="text-[.9rem] leading-[1.8] mb-8" style={{ color: '#5C5249' }}>
-              Entregue faturamento, não leads. A Symetra converte o tráfego que você gera em Pix confirmados na conta do cliente. RevShare automático, dashboard de agência, zero operacional.
+              Entregue faturamento, não leads. A Symetra transforma o tráfego que você gera em reservas pagas na conta do cliente, e você ganha um relatório que a clínica consegue conferir no extrato.
             </p>
             <p className="text-[.9rem] leading-[1.8] mb-8 font-bold" style={{ color: '#5C5249' }}>
               Menos CAC. Mais LTV. 
@@ -556,44 +556,29 @@ export default function Home() {
             <a href={WA_AGENCY} target="_blank" rel="noopener noreferrer"
                className="inline-flex items-center gap-2 text-xs font-medium tracking-wide px-6 py-3 rounded-sm no-underline transition-all hover:-translate-y-px hover:opacity-90"
                style={{ color: '#F5F0E8', background: '#0E0C0A' }}>
-              Consultar modelo de parceria <ArrowIcon size={11} />
+              Agendar conversa de 30 min <ArrowIcon size={11} />
             </a>
           </div>
 
           <div className="reveal bg-white rounded-xl p-7" style={{ border: '.5px solid #E2D9CE' }}>
             <div className="text-[10px] font-medium uppercase tracking-widest mb-5 pb-4 border-b border-[#E2D9CE]" style={{ color: '#9C8E82' }}>
-              Modelo RevShare · Como funciona
+              Como a parceria funciona
             </div>
             {[
-              { section: 'Precificação base', rows: [
-                { lbl: 'Mensalidade fixa',    val: 'R$ 1.497 / clínica', gold: false },
-                { lbl: 'Taxa por sinal pago', val: '+ R$ 10 / Pix',     gold: false },
-                { lbl: 'Sinal mínimo',        val: 'R$ 100',            gold: false },
-              ]},
-              { section: 'RevShare por clínica inputada', rows: [
-                { lbl: 'Meses 1–6 (cliff)',  val: '20% · ~R$ 299/mês', gold: true  },
-                { lbl: 'Meses 7–12',         val: '10% · ~R$ 150/mês', gold: false },
-                { lbl: '+13 meses (badge)',   val: '0% → 5%',           gold: false },
-              ]},             
-            ].map(({ section, rows }) => (
-              <div key={section}>
-                <div className="text-[8px] tracking-[.12em] uppercase mt-3.5 mb-1 pt-2 border-t border-[#F0EAE0]" style={{ color: '#9C8E82', fontFamily: 'var(--font-jetbrains)' }}>
-                  {section}
+              { n: '01', t: 'Conversa de 30 minutos', d: 'Você mostra sua carteira de clínicas e como mede resultado hoje.' },
+              { n: '02', t: 'Piloto com uma clínica', d: 'Instalamos a Serena em um cliente seu e acompanhamos as reservas juntos.' },
+              { n: '03', t: 'Relatório para o seu cliente', d: 'Você leva para a clínica o número de reservas confirmadas pela recepção.' },
+            ].map(({ n, t, d }) => (
+              <div key={n} className="flex gap-4 py-3 border-b border-[#F0EAE0] last:border-b-0">
+                <span className="text-[10px] pt-0.5" style={{ fontFamily: 'var(--font-jetbrains)', color: '#A8854A' }}>{n}</span>
+                <div>
+                  <div className="text-[13px] font-medium text-[#0E0C0A]">{t}</div>
+                  <div className="text-xs leading-relaxed mt-0.5" style={{ color: '#5C5249' }}>{d}</div>
                 </div>
-                {rows.map(({ lbl, val, gold }) => (
-                  <div key={lbl} className="flex items-baseline justify-between py-1 text-xs">
-                    <span style={{ color: '#5C5249' }}>{lbl}</span>
-                    <span className="font-medium" style={{ fontFamily: 'var(--font-jetbrains)', fontSize: '12px', color: gold ? '#A8854A' : '#0E0C0A' }}>{val}</span>
-                  </div>
-                ))}
               </div>
             ))}
-            <div className="mt-4 pt-4 border-t border-[#E2D9CE] flex items-baseline justify-between">
-              <span className="text-[11px] font-medium text-[#0E0C0A]">5 clínicas · primeiros 6 meses</span>
-              <span className="text-[1.3rem] font-medium" style={{ fontFamily: 'var(--font-jetbrains)', color: '#A8854A' }}>R$ 1.495/mês</span>
-            </div>
-            <div className="text-[9px] leading-relaxed mt-2" style={{ color: '#9C8E82' }}>
-              Cada clínica tem contagem independente. Uma nova clínica reinicia o cliff de 20%, independente do tempo de parceria.
+            <div className="text-[11px] leading-relaxed mt-4 pt-4 border-t border-[#E2D9CE]" style={{ color: '#5C5249' }}>
+              Valores e condições dependem do tamanho da sua carteira e são apresentados na conversa.
             </div>
           </div>
         </div>

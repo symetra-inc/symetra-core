@@ -35,3 +35,36 @@
     color: #0E0C0A;
   }
 }
+
+/* ── Tema claro (padrão do painel e do login) ─────────────────────────────────
+   As classes do app foram escritas para o fundo escuro (ink/linen/zinc/white).
+   Aqui invertemos as variáveis dentro de .theme-light, sem mexer em cada tela. */
+.theme-light {
+  color-scheme: light;
+  --color-ink:      #FAF8F4;
+  --color-ink2:     #FFFFFF;
+  --color-ink3:     #F2EEE7;
+  --color-linen:    #1E1B17;
+  --color-ash:      #6B6158;
+  --color-gold:     #94702F;
+  --color-gold-mid: #7D5E26;
+
+  --color-white: #1E1B17;
+  --color-black: #FFFFFF;
+  --color-zinc-50:  #18181B;
+  --color-zinc-100: #18181B;
+  --color-zinc-200: #27272A;
+  --color-zinc-300: #3F3F46;
+  --color-zinc-400: #52525B;
+  --color-zinc-500: #71717A;
+  --color-zinc-600: #71717A;
+  --color-zinc-700: #D4D4D8;
+  --color-zinc-800: #E4E4E7;
+  --color-zinc-900: #F4F4F5;
+  --color-zinc-950: #FAF8F4;
+}
+
+.theme-light ::selection {
+  background-color: #E9DBBE;
+  color: #1E1B17;
+}
